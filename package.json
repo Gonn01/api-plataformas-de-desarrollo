@@ -1,0 +1,24 @@
+{
+  "name": "api-plataformas-desarrollo",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/Gonn01/api-plataformas-desarrollo#readme",
+  "bugs": {
+    "url": "https://github.com/Gonn01/api-plataformas-desarrollo/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gonn01/api-plataformas-desarrollo.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
+  }
+}
