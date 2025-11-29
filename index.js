@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import { executeQuery } from "./db.js";
 
 const app = express();
 app.use(cors());
@@ -9,11 +10,9 @@ const port = process.env.PORT || 3000;
 
 const router = express.Router();
 
-router.get("/", (req, res) => {
-    console.log("GET / request received");
-    setTimeout(() => {
-        res.send({ "message": "Hello World!" });
-    }, 5000);
+router.get("/", async (req, res) => {
+    const user = await executeQuery("SELECT * FROM users LIMIT 1");
+    res.send(user);
 });
 
 app.use("/", router);
