@@ -10,7 +10,10 @@ const port = process.env.PORT || 3000;
 const router = express.Router();
 
 router.get("/", (req, res) => {
-    res.send("Hello World!");
+    console.log("GET / request received");
+    setTimeout(() => {
+        res.send({ "message": "Hello World!" });
+    }, 5000);
 });
 
 app.use("/", router);
