@@ -2,188 +2,168 @@
 import { executeQuery } from "../db.js";
 
 export class DashboardController {
-    
+
   static async home(req, res) {
-  try {
-    const { user_id } = req.query;
+    try {
+      const { user_id } = req.query;
 
-    if (!user_id) {
-      return res.status(400).json({ error: "Falta parámetro 'user_id'" });
-    }
+      if (!user_id) {
+        return res.status(400).json({ error: "Falta parámetro 'user_id'" });
+      }
 
-    // --------- TOTALES (como ya tenías) ---------
-    const deboRows = await executeQuery(
-      `
-      SELECT COALESCE(SUM(
-        amount * GREATEST(number_of_quotas - payed_quotas, 0)
-        / NULLIF(number_of_quotas, 0)
-      ), 0) AS total
-      FROM purchases p
-      JOIN financial_entities fe ON p.financial_entity_id = fe.id
-      WHERE fe.user_id = $1
-        AND p.deleted = false
-        AND p.currency_type = 1
+      // ==========================================================
+      // 1) TRAER ENTIDADES DEL USUARIO
+      // ==========================================================
+
+      const entities = await executeQuery(
+        `
+      SELECT id, name
+      FROM financial_entities
+      WHERE user_id = $1
+        AND deleted = false
+      ORDER BY created_at DESC
       `,
-      [user_id]
-    );
+        [user_id]
+      );
 
-    const meDebenRows = await executeQuery(
-      `
-      SELECT COALESCE(SUM(
-        amount * GREATEST(number_of_quotas - payed_quotas, 0)
-        / NULLIF(number_of_quotas, 0)
-      ), 0) AS total
-      FROM purchases p
-      JOIN financial_entities fe ON p.financial_entity_id = fe.id
-      WHERE fe.user_id = $1
-        AND p.deleted = false
-        AND p.currency_type = 1
-      `,
-      [user_id]
-    );
+      // ==========================================================
+      // 2) TRAER GASTOS ACTIVOS DE TODAS LAS ENTIDADES DEL USUARIO
+      // ==========================================================
 
-    const totalDeboARS = Number(deboRows[0]?.total ?? 0);
-    const totalMeDebenARS = Number(meDebenRows[0]?.total ?? 0);
-    const balanceARS = totalMeDebenARS - totalDeboARS;
-
-    // --------- PRÓXIMOS VENCIMIENTOS (como ya tenías) ---------
-    const upcoming = await executeQuery(
-      `
+      const activeExpenses = await executeQuery(
+        `
       SELECT
         p.id,
         p.name,
-        p.first_quota_date,
-        p.finalization_date,
+        p.amount,
+        p.amount_per_quota,
         p.number_of_quotas,
         p.payed_quotas,
+        p.fixed_expense,
         p.currency_type,
-        p.amount
+        p.first_quota_date,
+        p.finalization_date,
+        p.financial_entity_id
       FROM purchases p
-      JOIN financial_entities fe ON p.financial_entity_id = fe.id
-      WHERE fe.user_id = $1
-        AND p.deleted = false
-      ORDER BY p.first_quota_date NULLS LAST
-      LIMIT 5
-      `,
-      [user_id]
-    );
-
-    // --------- NUEVO: ENTIDADES + GASTOS ACTIVOS ---------
-    const entities = await executeQuery(
-      `
-      SELECT 
-        fe.id,
-        fe.name,
-        COUNT(p.id) AS active_expenses
-      FROM financial_entities fe
-      LEFT JOIN purchases p
-        ON p.financial_entity_id = fe.id
-       AND p.deleted = false
-       AND p.payed_quotas < p.number_of_quotas
+      JOIN financial_entities fe ON fe.id = p.financial_entity_id
       WHERE fe.user_id = $1
         AND fe.deleted = false
-      GROUP BY fe.id, fe.name
-      ORDER BY fe.created_at DESC
+        AND p.deleted = false
+        AND (
+             p.payed_quotas < p.number_of_quotas
+             OR p.fixed_expense = true
+        )
+      ORDER BY p.first_quota_date ASC NULLS LAST
       `,
-      [user_id]
-    );
+        [user_id]
+      );
 
-    res.json({
-      summary: {
-        total_balance_ars: balanceARS,
-        total_debo_ars: totalDeboARS,
-        total_me_deben_ars: totalMeDebenARS,
-      },
-      upcoming,
-      entities, // 👈 acá tenés la lista pedida
-    });
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Error en el servidor" });
+      // ==========================================================
+      // 3) AGRUPAR GASTOS POR ENTIDAD
+      // ==========================================================
+
+      const entitiesWithExpenses = entities.map((fe) => ({
+        id: fe.id,
+        name: fe.name,
+        gastos: activeExpenses.filter((g) => g.financial_entity_id === fe.id),
+      }));
+
+      // ==========================================================
+      // 4) DEVOLVER RESULTADO
+      // ==========================================================
+
+      res.json({
+        entities: entitiesWithExpenses,
+      });
+
+    } catch (err) {
+      console.log(err);
+      res.status(500).json({ error: "Error en el servidor" });
+    }
   }
-}
+
 
   static async crearGasto(req, res) {
-  try {
-    const {
-      financial_entity_id,
-      name,
-      amount,
-      number_of_quotas,
-      currency_type,
-      first_quota_date,
-      fixed_expense,
-      image
-    } = req.body;
+    try {
+      const {
+        financial_entity_id,
+        name,
+        amount,
+        number_of_quotas,
+        currency_type,
+        first_quota_date,
+        fixed_expense,
+        image
+      } = req.body;
 
-    if (!financial_entity_id || !name || !amount || !number_of_quotas) {
-      return res.status(400).json({ error: "Faltan campos obligatorios" });
-    }
+      if (!financial_entity_id || !name || !amount || !number_of_quotas) {
+        return res.status(400).json({ error: "Faltan campos obligatorios" });
+      }
 
-    const amountPerQuota = Number(amount) / Number(number_of_quotas);
+      const amountPerQuota = Number(amount) / Number(number_of_quotas);
 
-    const inserted = await executeQuery(
-      `INSERT INTO purchases 
+      const inserted = await executeQuery(
+        `INSERT INTO purchases 
         (financial_entity_id, name, amount, amount_per_quota, number_of_quotas,
          payed_quotas, currency_type, first_quota_date, finalization_date,
          fixed_expense, deleted, image, created_at)
        VALUES ($1,$2,$3,$4,$5,0,$6,$7,NULL,$8,false,$9,now())
        RETURNING *`,
-      [
-        financial_entity_id,
-        name,
-        amount,
-        amountPerQuota,
-        number_of_quotas,
-        currency_type,
-        first_quota_date,
-        fixed_expense || false,
-        image || null
-      ]
-    );
+        [
+          financial_entity_id,
+          name,
+          amount,
+          amountPerQuota,
+          number_of_quotas,
+          currency_type,
+          first_quota_date,
+          fixed_expense || false,
+          image || null
+        ]
+      );
 
-    res.status(201).json(inserted[0]);
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Error en el servidor" });
+      res.status(201).json(inserted[0]);
+    } catch (err) {
+      console.log(err);
+      res.status(500).json({ error: "Error en el servidor" });
+    }
   }
-}
 
   static async pagarCuota(req, res) {
-  try {
-    const { purchase_id } = req.body;
+    try {
+      const { purchase_id } = req.body;
 
-    const rows = await executeQuery(
-      `SELECT * FROM purchases WHERE id = $1 LIMIT 1`,
-      [purchase_id]
-    );
+      const rows = await executeQuery(
+        `SELECT * FROM purchases WHERE id = $1 LIMIT 1`,
+        [purchase_id]
+      );
 
-    if (rows.length === 0) {
-      return res.status(404).json({ error: "Gasto no encontrado" });
-    }
+      if (rows.length === 0) {
+        return res.status(404).json({ error: "Gasto no encontrado" });
+      }
 
-    const purchase = rows[0];
+      const purchase = rows[0];
 
-    const newPayed = Number(purchase.payed_quotas) + 1;
+      const newPayed = Number(purchase.payed_quotas) + 1;
 
-    const finalization =
-      newPayed >= Number(purchase.number_of_quotas) ? new Date() : null;
+      const finalization =
+        newPayed >= Number(purchase.number_of_quotas) ? new Date() : null;
 
-    const updated = await executeQuery(
-      `UPDATE purchases
+      const updated = await executeQuery(
+        `UPDATE purchases
        SET payed_quotas = $1,
            finalization_date = $2
        WHERE id = $3
        RETURNING *`,
-      [newPayed, finalization, purchase_id]
-    );
+        [newPayed, finalization, purchase_id]
+      );
 
-    res.json(updated[0]);
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "Error en el servidor" });
+      res.json(updated[0]);
+    } catch (err) {
+      console.log(err);
+      res.status(500).json({ error: "Error en el servidor" });
+    }
   }
-}
 
 
   static async pagarCuotasLote(req, res) {

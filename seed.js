@@ -27,6 +27,15 @@ function randomChoice(arr) {
 async function runSeed() {
     console.log("🌱 Iniciando seed…");
 
+    await sql.unsafe(`
+    TRUNCATE TABLE 
+        purchases_logs,
+        purchases,
+        financial_entities_logs,
+        financial_entities
+    RESTART IDENTITY CASCADE;
+`);
+
     const USER_ID = 1; // usuario al que se le generarán entidades + gastos
 
     // ===============================================================
