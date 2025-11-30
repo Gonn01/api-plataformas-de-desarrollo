@@ -24,5 +24,8 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "postgres": "^3.4.7"
+  },
+  "devDependencies": {
+    "eslint": "^9.28.0"
   }
 }
