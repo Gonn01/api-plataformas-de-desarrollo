@@ -127,5 +127,6 @@ export class EntidadesFinancierasController {
             res.status(500).json({ error: "Error en el servidor" });
         }
     }
+
 }
 
