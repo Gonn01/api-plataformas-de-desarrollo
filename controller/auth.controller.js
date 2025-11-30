@@ -97,5 +97,48 @@ export class AuthController {
             res.status(500).json({ error: "Error en el servidor" });
         }
     }
+    static async firebaseLogin(req, res) {
+        try {
+            console.log(req.body);
+            const { firebaseId, name, email } = req.body;
+
+            if (!firebaseId) {
+                return res.status(400).json({ error: "Token faltante" });
+            }
+
+            // buscar usuario en tu DB
+            const existing = await executeQuery(
+                "SELECT * FROM users WHERE firebase_user_id = $1 LIMIT 1",
+                [firebaseId]
+            );
+
+            let user;
+
+            if (existing.length === 0) {
+                // crear si no existe
+                const inserted = await executeQuery(
+                    `INSERT INTO users (name, email, firebase_user_id, created_at)
+         VALUES ($1, $2, $3, NOW())
+         RETURNING id, name, email`,
+                    [name || "Usuario Google", email, firebaseId]
+                );
+                user = inserted[0];
+            } else {
+                user = existing[0];
+            }
+
+            const token = jwt.sign(
+                { id: user.id, email: user.email, firebaseId },
+                JWT_SECRET,
+                { expiresIn: "7d" }
+            );
+
+            res.json({ user, token });
+
+        } catch (err) {
+            console.log(err);
+            res.status(401).json({ error: "Token inválido" });
+        }
+    };
 }
 
