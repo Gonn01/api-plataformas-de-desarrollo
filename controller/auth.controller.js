@@ -8,7 +8,7 @@ export class AuthController {
     static async register(req, res) {
         try {
             const { name, email, password, firebaseId } = req.body;
-
+            const firebaseIdFinal = firebaseId ?? null;
             if (!name || !email || !password) {
                 return res.status(400).json({ error: "Faltan campos" });
             }
@@ -28,13 +28,13 @@ export class AuthController {
                 `INSERT INTO users (name, email, password, firebase_user_id, created_at)
              VALUES ($1, $2, $3, $4, NOW())
              RETURNING id, name, email`,
-                [name, email, hash, firebaseId]
+                [name, email, hash, firebaseIdFinal]
             );
 
             const user = inserted[0];
 
             const token = jwt.sign(
-                { id: user.id, email: user.email, firebaseId },
+                { id: user.id, email: user.email, firebaseId: firebaseIdFinal },
                 JWT_SECRET,
                 { expiresIn: "7d" }
             );
