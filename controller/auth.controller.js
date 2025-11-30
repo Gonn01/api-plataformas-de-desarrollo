@@ -1,7 +1,9 @@
 
 import bcrypt from "bcrypt";
 import { executeQuery } from "../db.js";
+import jwt from "jsonwebtoken";
 
+const JWT_SECRET = process.env.JWT_SECRET;
 export class AuthController {
     static async register(req, res) {
         try {
@@ -11,7 +13,6 @@ export class AuthController {
                 return res.status(400).json({ error: "Faltan campos" });
             }
 
-            // Verificar si el email existe
             const existing = await executeQuery(
                 "SELECT id FROM users WHERE email = $1 LIMIT 1",
                 [email]
@@ -33,7 +34,7 @@ export class AuthController {
             const user = inserted[0];
 
             const token = jwt.sign(
-                { id: user.id, email: user.email },
+                { id: user.id, email: user.email, firebaseId },
                 JWT_SECRET,
                 { expiresIn: "7d" }
             );
