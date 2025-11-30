@@ -3,7 +3,11 @@ import { EntidadesFinancierasController } from "../controller/entidades_financie
 
 const router = express.Router();
 
+router.get("/", EntidadesFinancierasController.listar)
+router.get("/:id", EntidadesFinancierasController.obtenerById);
 router.post("/", EntidadesFinancierasController.crear);
-router.delete("/", EntidadesFinancierasController.eliminar);
+router.delete("/:id", EntidadesFinancierasController.eliminar);
+router.put("/:id", EntidadesFinancierasController.actualizar)
+
 
 export default router;
