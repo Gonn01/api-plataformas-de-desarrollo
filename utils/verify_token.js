@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { logRed } from './logs_custom.js';
 import { JWT_SECRET } from '../config/env.js';
 
-function verifyToken(req, res, next) {
+export function verifyToken(req, res, next) {
   const token = req.headers.authorization?.split(" ")[1];
 
 
@@ -20,5 +20,3 @@ function verifyToken(req, res, next) {
     next();
   });
 }
-
-export default verifyToken;

@@ -32,16 +32,9 @@ export class AuthController {
             const payload = { id: user.id, email: user.email };
             if (firebaseIdFinal) payload.firebaseId = firebaseIdFinal;
 
-            const token = jwt.sign(
-                payload,
-                JWT_SECRET,
-                { expiresIn: "7d" }
-            );
-
             res.json({
                 message: "Usuario creado con éxito",
-                user,
-                token
+                user
             });
 
         } catch (err) {
@@ -73,7 +66,7 @@ export class AuthController {
             }
 
             const token = jwt.sign(
-                { id: user.id, email: user.email, firebaseId: user.firebase_id },
+                { userId: user.id, email: user.email, firebaseId: user.firebase_id },
                 JWT_SECRET,
                 { expiresIn: "7d" }
             );
