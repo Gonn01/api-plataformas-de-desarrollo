@@ -1,9 +1,7 @@
-import dotenv from "dotenv";
 import postgres from "postgres";
+import { DATABASE_URL } from "./config/env.js";
 
-dotenv.config({ path: process.env.ENV_FILE || ".env" });
-
-const connectionString = process.env.DATABASE_URL;
+const connectionString = DATABASE_URL;
 const connection = postgres(connectionString, { ssl: "require" });
 
 export async function executeQuery(query, values = [], log = true) {

@@ -1,10 +1,9 @@
-import dotenv from "dotenv";
 import postgres from "postgres";
 import { faker } from "@faker-js/faker";
+import { DATABASE_URL } from "./config/env";
 
-dotenv.config({ path: process.env.ENV_FILE || ".env" });
 
-const connectionString = process.env.DATABASE_URL;
+const connectionString = DATABASE_URL;
 const sql = postgres(connectionString, { ssl: "require" });
 
 // -----------------------------------------------------------
