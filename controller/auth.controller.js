@@ -73,7 +73,7 @@ export class AuthController {
 
             res.json({
                 message: "Login exitoso",
-                user: {
+                data: {
                     id: user.id,
                     name: user.name,
                     email: user.email

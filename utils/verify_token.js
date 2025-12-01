@@ -5,7 +5,6 @@ import { JWT_SECRET } from '../config/env.js';
 export function verifyToken(req, res, next) {
   const token = req.headers.authorization?.split(" ")[1];
 
-
   if (!token) {
     logRed('Token no proporcionado');
     return res.status(401).json({ message: 'Token no proporcionado' });
@@ -16,7 +15,9 @@ export function verifyToken(req, res, next) {
       logRed('Token inválido', token);
       return res.status(403).json({ message: 'Token inválido' });
     }
+
     req.session = decoded;
+
     next();
   });
 }
