@@ -112,7 +112,7 @@ export class AuthController {
                 { expiresIn: "7d" }
             );
 
-            res.json({ user, token });
+            res.json({ data: user, token });
 
         } catch (err) {
             logRed(err);
