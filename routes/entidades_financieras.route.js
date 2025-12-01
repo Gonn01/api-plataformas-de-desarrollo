@@ -1,13 +1,17 @@
 import express from "express";
-import { EntidadesFinancierasController } from "../controller/entidades_financieras.controller.js";
+import { EntidadesFinancierasController } from "../controller/entidades-financieras.controller.js";
+import { EntidadesFinancierasRepository } from "../repositories/entidades-financieras.repository.js";
 
 const router = express.Router();
 
-router.get("/", EntidadesFinancierasController.listar)
-router.get("/:id", EntidadesFinancierasController.obtenerById);
-router.post("/", EntidadesFinancierasController.crear);
-router.delete("/:id", EntidadesFinancierasController.eliminar);
-router.put("/:id", EntidadesFinancierasController.actualizar)
+const entidadesFinancierasRepository = new EntidadesFinancierasRepository();
+const entidadesFinancierasController = new EntidadesFinancierasController(entidadesFinancierasRepository);
+
+router.get("/", entidadesFinancierasController.listar)
+router.get("/:id", entidadesFinancierasController.obtenerPorId);
+router.post("/", entidadesFinancierasController.crear);
+router.delete("/:id", entidadesFinancierasController.eliminar);
+router.put("/:id", entidadesFinancierasController.actualizar)
 
 
 export default router;

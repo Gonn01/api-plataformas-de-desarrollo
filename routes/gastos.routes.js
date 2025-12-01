@@ -1,15 +1,14 @@
 import { Router } from 'express';
-// Importamos la Clase (fíjate en las llaves)
 import { GastosController } from '../controller/gastos.controller.js';
+import { GastosRepository } from '../repositories/gastos.repository.js';
 
 const router = Router();
 
-// Rutas base: /gastos
-// Accedemos a los métodos estáticos con el punto (.)
+const gastosRepository = new GastosRepository();
+const gastosController = new GastosController(gastosRepository);
 
-router.get('/:id', GastosController.getById);
-router.put('/:id', GastosController.update);
-router.delete('/:id', GastosController.delete);
-
+router.get('/:id', gastosController.getById);
+router.put('/:id', gastosController.update);
+router.delete('/:id', gastosController.delete);
 
 export default router;
