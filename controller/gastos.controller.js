@@ -1,3 +1,5 @@
+import { logRed } from "../utils/logs_custom.js";
+
 export class GastosController {
 
     constructor(gastosRepository) {
@@ -16,7 +18,7 @@ export class GastosController {
 
             res.json(rows[0]);
         } catch (err) {
-            console.log(err);
+            logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
         }
     }
@@ -34,7 +36,7 @@ export class GastosController {
 
             res.json({ message: "Gasto actualizado", gasto: updatedRows[0] });
         } catch (err) {
-            console.log(err);
+            logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
         }
     }
@@ -51,7 +53,7 @@ export class GastosController {
 
             res.json({ message: "Gasto eliminado correctamente", id });
         } catch (err) {
-            console.log(err);
+            logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
         }
     }

@@ -2,6 +2,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config/env.js";
+import { logRed } from "../utils/logs_custom.js";
 
 export class AuthController {
     constructor(authRepository) {
@@ -44,7 +45,7 @@ export class AuthController {
             });
 
         } catch (err) {
-            console.log(err);
+            logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
         }
     }
@@ -72,7 +73,7 @@ export class AuthController {
             }
 
             const token = jwt.sign(
-                { id: user.id, email: user.email },
+                { id: user.id, email: user.email, firebaseId: user.firebase_id },
                 JWT_SECRET,
                 { expiresIn: "7d" }
             );
@@ -88,7 +89,7 @@ export class AuthController {
             });
 
         } catch (err) {
-            console.log(err);
+            logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
         }
     }
@@ -113,7 +114,7 @@ export class AuthController {
             }
 
             const token = jwt.sign(
-                { id: user.id, email: user.email, firebaseId },
+                { userId: user.id, email: user.email, firebaseId },
                 JWT_SECRET,
                 { expiresIn: "7d" }
             );
@@ -121,7 +122,7 @@ export class AuthController {
             res.json({ user, token });
 
         } catch (err) {
-            console.log(err);
+            logRed(err);
             res.status(401).json({ error: "Token inválido" });
         }
     };

@@ -1,3 +1,5 @@
+import { logRed } from "../utils/logs_custom.js";
+
 export class EntidadesFinancierasController {
     constructor(entidadesFinancierasRepository) {
         this.entidadesFinancierasRepository = entidadesFinancierasRepository;
@@ -5,13 +7,13 @@ export class EntidadesFinancierasController {
 
     listar = async (req, res) => {
         try {
-            const user = req.user;
+            const { userId } = req.session;
 
-            const rows = await this.entidadesFinancierasRepository.listar(user.id);
+            const rows = await this.entidadesFinancierasRepository.listar(userId);
 
             res.json(rows);
         } catch (err) {
-            console.log(err);
+            logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
         }
     }
@@ -19,7 +21,7 @@ export class EntidadesFinancierasController {
     obtenerPorId = async (req, res) => {
         try {
             const { id } = req.params;
-            const { userId } = req.user;
+            const { userId } = req.session;
 
             const rows = await this.entidadesFinancierasRepository.getById(id, userId);
 
@@ -29,7 +31,7 @@ export class EntidadesFinancierasController {
 
             res.json(rows[0]);
         } catch (err) {
-            console.log(err);
+            logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
         }
     }
@@ -37,7 +39,7 @@ export class EntidadesFinancierasController {
     crear = async (req, res) => {
         try {
             const { name } = req.body;
-            const { userId } = req.user;
+            const { userId } = req.session;
 
             if (!name) {
                 return res.status(400).json({ error: "Falta el campo 'name'" });
@@ -47,7 +49,7 @@ export class EntidadesFinancierasController {
 
             res.status(201).json(inserted[0]);
         } catch (err) {
-            console.log(err);
+            logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
         }
     }
@@ -56,7 +58,7 @@ export class EntidadesFinancierasController {
         try {
             const { id } = req.params;
             const { name } = req.body;
-            const { userId } = req.user;
+            const { userId } = req.session;
 
             const currentRows = await this.entidadesFinancierasRepository.getById(id, userId);
 
@@ -68,7 +70,7 @@ export class EntidadesFinancierasController {
 
             res.json(updatedRows[0]);
         } catch (err) {
-            console.log(err);
+            logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
         }
     }
@@ -86,7 +88,7 @@ export class EntidadesFinancierasController {
 
             res.json({ message: "Entidad financiera eliminada con éxito", id });
         } catch (err) {
-            console.log(err);
+            logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
         }
     }

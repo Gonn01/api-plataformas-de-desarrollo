@@ -1,6 +1,7 @@
 import postgres from "postgres";
 import { faker } from "@faker-js/faker";
 import { DATABASE_URL } from "./config/env";
+import { logCyan, logGreen } from "./utils/logs_custom";
 
 
 const connectionString = DATABASE_URL;
@@ -24,7 +25,7 @@ function randomChoice(arr) {
 // -----------------------------------------------------------
 
 async function runSeed() {
-    console.log("🌱 Iniciando seed…");
+    logGreen("🌱 Iniciando seed…");
 
     await sql.unsafe(`
     TRUNCATE TABLE 
@@ -51,7 +52,7 @@ async function runSeed() {
         "Brubank",
     ];
 
-    console.log("➡ Creando entidades financieras…");
+    logCyan("➡ Creando entidades financieras…");
 
     const entities = [];
 
@@ -77,14 +78,13 @@ async function runSeed() {
         );
     }
 
-    console.log(`✔ ${entities.length} entidades creadas.`);
+    logGreen(`✔ ${entities.length} entidades creadas.`);
 
     // ===============================================================
     // 2) Crear GASTOS
     // ===============================================================
 
-    console.log("➡ Creando gastos…");
-
+    logCyan("➡ Creando gastos…");
     const NUM_PURCHASES = 40;
 
     // CURRENCY ENUM AS INT → 0, 1, 2
@@ -159,9 +159,9 @@ async function runSeed() {
         );
     }
 
-    console.log(`✔ ${purchases.length} gastos creados.`);
+    logGreen(`✔ ${purchases.length} gastos creados.`);
 
-    console.log("🎉 SEED COMPLETADO!");
+    logGreen("🎉 SEED COMPLETADO!");
     process.exit(0);
 }
 

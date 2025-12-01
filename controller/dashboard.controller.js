@@ -1,3 +1,5 @@
+import { logRed } from "../utils/logs_custom.js";
+
 export class DashboardController {
   constructor(dashboardRepository, gastosRepository, entidadesFinancierasRepository) {
     this.dashboardRepository = dashboardRepository;
@@ -7,7 +9,7 @@ export class DashboardController {
 
   home = async (req, res) => {
     try {
-      const { userId } = req.body;
+      const { userId } = req.session;
 
       const entities = await this.entidadesFinancierasRepository.listar(userId);
 
@@ -24,7 +26,7 @@ export class DashboardController {
       });
 
     } catch (err) {
-      console.log(err);
+      logRed(err);
       res.status(500).json({ error: "Error en el servidor" });
     }
   }
@@ -52,7 +54,7 @@ export class DashboardController {
 
       res.status(201).json(inserted[0]);
     } catch (err) {
-      console.log(err);
+      logRed(err);
       res.status(500).json({ error: "Error en el servidor" });
     }
   }
@@ -82,7 +84,7 @@ export class DashboardController {
 
       res.json(updated[0]);
     } catch (err) {
-      console.log(err);
+      logRed(err);
       res.status(500).json({ error: "Error en el servidor" });
     }
   }
@@ -104,7 +106,7 @@ export class DashboardController {
         updated,
       });
     } catch (err) {
-      console.log(err);
+      logRed(err);
       res.status(500).json({ error: "Error en el servidor" });
     }
   }
