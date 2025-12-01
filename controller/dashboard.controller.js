@@ -7,7 +7,7 @@ export class DashboardController {
 
   home = async (req, res) => {
     try {
-      const { userId } = req.user;
+      const { userId } = req.body;
 
       const entities = await this.entidadesFinancierasRepository.listar(userId);
 
