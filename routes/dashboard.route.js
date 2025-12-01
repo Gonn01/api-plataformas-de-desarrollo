@@ -9,8 +9,8 @@ const router = express.Router();
 const dashboardRepository = new DashboardRepository();
 const gastosRepository = new GastosRepository();
 const entidadesFinancierasRepository = new EntidadesFinancierasRepository();
-const dashboardController = new DashboardController(dashboardRepository, gastosRepository, entidadesFinancierasRepository);
 
+const dashboardController = new DashboardController(dashboardRepository, gastosRepository, entidadesFinancierasRepository);
 
 router.get("/home", dashboardController.home);
 router.post("/gastos", dashboardController.crearGasto);
