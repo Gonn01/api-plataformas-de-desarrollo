@@ -1,22 +1,17 @@
 import { logRed } from "../utils/logs_custom.js";
 
 export class DashboardController {
-  constructor(dashboardRepository, gastosRepository, entidadesFinancierasRepository) {
-    this.dashboardRepository = dashboardRepository;
-    this.gastosRepository = gastosRepository;
-    this.entidadesFinancierasRepository = entidadesFinancierasRepository;
+  constructor(dashboardService) {
+    this.dashboardService = dashboardService;
   }
 
   home = async (req, res) => {
     try {
       const { userId } = req.session;
 
-      const activeExpenses = await this.dashboardRepository.home(userId);
+      const response = await this.dashboardService.getHomeData(userId);
 
-      res.json({
-        entities: activeExpenses,
-      });
-
+      res.json(response);
     } catch (err) {
       logRed(err);
       res.status(500).json({ error: "Error en el servidor" });
@@ -40,9 +35,16 @@ export class DashboardController {
         return res.status(400).json({ error: "Faltan campos obligatorios" });
       }
 
-      const amountPerQuota = Number(amount) / Number(number_of_quotas);
-
-      const inserted = await this.gastosRepository.create(financial_entity_id, name, amount, amountPerQuota, number_of_quotas, currency_type, first_quota_date, fixed_expense, image);
+      const inserted = await this.dashboardService.crearGasto(
+        financial_entity_id,
+        name,
+        amount,
+        number_of_quotas,
+        currency_type,
+        first_quota_date,
+        fixed_expense,
+        image
+      );
 
       res.status(201).json(inserted[0]);
     } catch (err) {
@@ -55,24 +57,7 @@ export class DashboardController {
     try {
       const { purchase_id } = req.body;
 
-      const rows = await this.gastosRepository.getById(purchase_id);
-
-      if (rows.length === 0) {
-        return res.status(404).json({ error: "Gasto no encontrado" });
-      }
-
-      const purchase = rows[0];
-
-      const newPayed = Number(purchase.payed_quotas) + 1;
-
-      const finalization =
-        newPayed >= Number(purchase.number_of_quotas) ? new Date() : null;
-
-      const updated = await this.gastosRepository.pagarCuota(
-        purchase_id,
-        newPayed,
-        finalization
-      );
+      const updated = await this.dashboardService.pagarCuota(purchase_id);
 
       res.json(updated[0]);
     } catch (err) {
@@ -91,7 +76,7 @@ export class DashboardController {
         });
       }
 
-      const updated = await this.gastosRepository.pagarCuotasLote(purchase_ids);
+      const updated = await this.dashboardService.pagarCuotasLote(purchase_ids);
 
       res.json({
         message: "Cuotas pagadas en lote",

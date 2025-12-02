@@ -2,21 +2,20 @@ import { logRed } from "../utils/logs_custom.js";
 
 export class GastosController {
 
-    constructor(gastosRepository) {
-        this.gastosRepository = gastosRepository;
+    constructor(gastosService) {
+        this.gastosService = gastosService;
     }
 
     getById = async (req, res) => {
         try {
             const { id } = req.params;
 
-            const rows = await this.gastosRepository.getById(id);
+            const response = await this.gastosService.getById(id);
 
-            if (rows.length === 0) {
-                return res.status(404).json({ error: "Gasto no encontrado" });
-            }
-
-            res.json(rows[0]);
+            res.json({
+                message: "Gasto encontrado",
+                data: response
+            });
         } catch (err) {
             logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
@@ -28,13 +27,12 @@ export class GastosController {
             const { id } = req.params;
             const { name, amount, image, fixed_expense } = req.body;
 
-            const updatedRows = await this.gastosRepository.update(id, name, amount, image, fixed_expense);
+            const response = await this.gastosService.update(id, name, amount, image, fixed_expense);
 
-            if (updatedRows.length === 0) {
-                return res.status(404).json({ error: "No se pudo actualizar (Gasto no existe)" });
-            }
-
-            res.json({ message: "Gasto actualizado", gasto: updatedRows[0] });
+            res.json({
+                message: "Gasto actualizado",
+                data: response
+            });
         } catch (err) {
             logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
@@ -45,13 +43,12 @@ export class GastosController {
         try {
             const { id } = req.params;
 
-            const deletedRows = await this.gastosRepository.delete(id);
+            await this.gastosService.delete(id);
 
-            if (deletedRows.length === 0) {
-                return res.status(404).json({ error: "Gasto no encontrado" });
-            }
-
-            res.json({ message: "Gasto eliminado correctamente", id });
+            res.json({
+                message: "Gasto eliminado correctamente",
+                data: id
+            });
         } catch (err) {
             logRed(err);
             res.status(500).json({ error: "Error en el servidor" });

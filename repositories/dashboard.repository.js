@@ -1,7 +1,7 @@
 import { executeQuery } from "../db.js";
 
 export class DashboardRepository {
-  async home(userId) {
+  async getHomeData(userId) {
     return await executeQuery(`SELECT
   e.id,
   e.name,

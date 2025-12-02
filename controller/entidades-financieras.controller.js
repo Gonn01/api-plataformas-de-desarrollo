@@ -1,19 +1,20 @@
 import { logRed } from "../utils/logs_custom.js";
 
 export class EntidadesFinancierasController {
-    constructor(entidadesFinancierasRepository, gastosRepository, logsRepository) {
-        this.entidadesFinancierasRepository = entidadesFinancierasRepository;
-        this.gastosRepository = gastosRepository;
-        this.logsRepository = logsRepository;
+    constructor(entidadesFinancierasService) {
+        this.entidadesFinancierasService = entidadesFinancierasService;
     }
 
     listar = async (req, res) => {
         try {
             const { userId } = req.session;
 
-            const rows = await this.entidadesFinancierasRepository.listar(userId);
+            const response = await this.entidadesFinancierasService.listar(userId);
 
-            res.json(rows);
+            res.json({
+                message: "Listado de entidades financieras",
+                data: response
+            });
         } catch (err) {
             logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
@@ -25,22 +26,12 @@ export class EntidadesFinancierasController {
             const { id } = req.params;
             const { userId } = req.session;
 
-            const entidad = await this.entidadesFinancierasRepository.getById(id, userId);
-
-            if (!entidad.length) {
-                return res.status(404).json({ error: "Entidad no encontrada" });
-            }
-
-            const gastos = await this.gastosRepository.getGastosByEntidad(id);
-            const logs = await this.logsRepository.getLogsByEntidad(id);
+            const response = await this.entidadesFinancierasService.obtenerPorId(id, userId);
 
             res.json({
-                ...entidad[0],
-                gastos_activos: gastos.filter(g => g.deleted === false),
-                gastos_inactivos: gastos.filter(g => g.deleted === true),
-                logs
+                message: "Entidad financiera obtenida con éxito",
+                data: response
             });
-
         } catch (err) {
             logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
@@ -56,9 +47,12 @@ export class EntidadesFinancierasController {
                 return res.status(400).json({ error: "Falta el campo 'name'" });
             }
 
-            const inserted = await this.entidadesFinancierasRepository.create(name, userId);
+            const response = await this.entidadesFinancierasService.crear(name, userId);
 
-            res.status(201).json(inserted[0]);
+            res.status(201).json({
+                message: "Entidad financiera creada con éxito",
+                data: response
+            });
         } catch (err) {
             logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
@@ -71,15 +65,9 @@ export class EntidadesFinancierasController {
             const { name } = req.body;
             const { userId } = req.session;
 
-            const currentRows = await this.entidadesFinancierasRepository.getById(id, userId);
+            const response = await this.entidadesFinancierasService.actualizar(id, name, userId);
 
-            if (currentRows.length === 0) {
-                return res.status(404).json({ error: "Entidad no encontrada" });
-            }
-
-            const updatedRows = await this.entidadesFinancierasRepository.update(id, name, userId);
-
-            res.json(updatedRows[0]);
+            res.json(response);
         } catch (err) {
             logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
@@ -89,15 +77,14 @@ export class EntidadesFinancierasController {
     eliminar = async (req, res) => {
         try {
             const { id } = req.params;
-            const { userId } = req.user;
+            const { userId } = req.session;
 
-            const deletedRows = await this.entidadesFinancierasRepository.delete(id, userId);
+            const response = await this.entidadesFinancierasService.eliminar(id, userId);
 
-            if (deletedRows.length === 0) {
-                return res.status(404).json({ error: "Entidad no encontrada" });
-            }
-
-            res.json({ message: "Entidad financiera eliminada con éxito", id });
+            res.json({
+                message: "Entidad financiera eliminada con éxito",
+                data: response
+            });
         } catch (err) {
             logRed(err);
             res.status(500).json({ error: "Error en el servidor" });

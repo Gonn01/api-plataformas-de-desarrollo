@@ -3,6 +3,7 @@ import { DashboardController } from "../controller/dashboard.controller.js";
 import { DashboardRepository } from "../repositories/dashboard.repository.js";
 import { GastosRepository } from "../repositories/gastos.repository.js";
 import { EntidadesFinancierasRepository } from "../repositories/entidades-financieras.repository.js";
+import { DashboardService } from "../services/dashboard.service.js";
 
 const router = express.Router();
 
@@ -10,7 +11,9 @@ const dashboardRepository = new DashboardRepository();
 const gastosRepository = new GastosRepository();
 const entidadesFinancierasRepository = new EntidadesFinancierasRepository();
 
-const dashboardController = new DashboardController(dashboardRepository, gastosRepository, entidadesFinancierasRepository);
+const dashboardService = new DashboardService(dashboardRepository, gastosRepository, entidadesFinancierasRepository);
+
+const dashboardController = new DashboardController(dashboardService);
 
 router.get("/home", dashboardController.home);
 router.post("/gastos", dashboardController.crearGasto);
