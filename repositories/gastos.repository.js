@@ -8,6 +8,26 @@ export class GastosRepository {
         );
     }
 
+    async getGastosByEntidad(entidadId) {
+        return await executeQuery(
+            `SELECT 
+                id,
+                created_at,
+                name,
+                amount,
+                amount_per_quota,
+                number_of_quotas,
+                payed_quotas,
+                currency_type,
+                fixed_expense,
+                deleted
+             FROM purchases
+             WHERE financial_entity_id = $1
+             ORDER BY created_at DESC`,
+            [entidadId]
+        );
+    }
+
     async pagarCuota(id, newPayed, finalization) {
         return await executeQuery(
             `UPDATE purchases

@@ -1,8 +1,10 @@
 import { logRed } from "../utils/logs_custom.js";
 
 export class EntidadesFinancierasController {
-    constructor(entidadesFinancierasRepository) {
+    constructor(entidadesFinancierasRepository, gastosRepository, logsRepository) {
         this.entidadesFinancierasRepository = entidadesFinancierasRepository;
+        this.gastosRepository = gastosRepository;
+        this.logsRepository = logsRepository;
     }
 
     listar = async (req, res) => {
@@ -23,18 +25,27 @@ export class EntidadesFinancierasController {
             const { id } = req.params;
             const { userId } = req.session;
 
-            const rows = await this.entidadesFinancierasRepository.getById(id, userId);
+            const entidad = await this.entidadesFinancierasRepository.getById(id, userId);
 
-            if (rows.length === 0) {
+            if (!entidad.length) {
                 return res.status(404).json({ error: "Entidad no encontrada" });
             }
 
-            res.json(rows[0]);
+            const gastos = await this.gastosRepository.getGastosByEntidad(id);
+            const logs = await this.logsRepository.getLogsByEntidad(id);
+
+            res.json({
+                ...entidad[0],
+                gastos_activos: gastos.filter(g => g.deleted === false),
+                gastos_inactivos: gastos.filter(g => g.deleted === true),
+                logs
+            });
+
         } catch (err) {
             logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
         }
-    }
+    };
 
     crear = async (req, res) => {
         try {

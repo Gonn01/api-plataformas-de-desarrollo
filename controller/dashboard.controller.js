@@ -11,18 +11,10 @@ export class DashboardController {
     try {
       const { userId } = req.session;
 
-      const entities = await this.entidadesFinancierasRepository.listar(userId);
-
-      const activeExpenses = await this.dashboardRepository.getActiveGastos(userId);
-
-      const entitiesWithExpenses = entities.map((fe) => ({
-        id: fe.id,
-        name: fe.name,
-        gastos: activeExpenses.filter((g) => g.financial_entity_id === fe.id),
-      }));
+      const activeExpenses = await this.dashboardRepository.home(userId);
 
       res.json({
-        entities: entitiesWithExpenses,
+        entities: activeExpenses,
       });
 
     } catch (err) {

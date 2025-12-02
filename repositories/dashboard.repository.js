@@ -1,9 +1,33 @@
 import { executeQuery } from "../db.js";
 
 export class DashboardRepository {
-    async getActiveGastos(userId) {
-        return await executeQuery(
-            `
+  async home(userId) {
+    return await executeQuery(`SELECT
+  e.id,
+  e.name,
+  COALESCE(
+  json_agg(
+    json_build_object(
+      'id', g.id,
+      'title', g.name,
+      'amount', g.amount
+    )
+  ) FILTER (WHERE g.id IS NOT NULL),
+  '[]'::json
+) AS gastos
+FROM financial_entities e
+LEFT JOIN purchases g 
+  ON g.financial_entity_id = e.id 
+  AND g.deleted = false
+WHERE e.user_id = $1 
+  AND e.deleted = false
+GROUP BY e.id;
+
+    `, [userId]);
+  }
+  async getActiveGastos(userId) {
+    return await executeQuery(
+      `
       SELECT
         p.id,
         p.name,
@@ -27,7 +51,7 @@ export class DashboardRepository {
         )
       ORDER BY p.first_quota_date ASC NULLS LAST
       `,
-            [userId]
-        );
-    }
+      [userId]
+    );
+  }
 }
