@@ -14,6 +14,7 @@ export class DashboardRepository {
                   'amount', g.amount,
                   'number_of_quotas', g.number_of_quotas,
                   'payed_quotas', g.payed_quotas,
+                  'type', g.type,
                   'fixed_expense', g.fixed_expense
                 )
               ) FILTER (WHERE g.id IS NOT NULL),
@@ -38,6 +39,7 @@ export class DashboardRepository {
         p.amount_per_quota,
         p.number_of_quotas,
         p.payed_quotas,
+        p.type,
         p.fixed_expense,
         p.currency_type,
         p.first_quota_date,

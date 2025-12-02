@@ -31,7 +31,8 @@ export class DashboardController {
         currency_type,
         first_quota_date,
         fixed_expense,
-        image
+        image,
+        type
       } = req.body;
 
       if (!financial_entity_id || !name || !amount || !number_of_quotas) {
@@ -46,7 +47,8 @@ export class DashboardController {
         currency_type,
         first_quota_date,
         fixed_expense,
-        image
+        image,
+        type
       );
 
       res.status(201).json(inserted[0]);
