@@ -76,7 +76,8 @@ export class AuthController {
                 data: {
                     id: user.id,
                     name: user.name,
-                    email: user.email
+                    email: user.email,
+                    avatar: user.avatar
                 },
                 token
             });
@@ -89,7 +90,7 @@ export class AuthController {
 
     firebaseLogin = async (req, res) => {
         try {
-            const { firebaseId, name, email } = req.body;
+            const { firebaseId, name, email, avatar } = req.body;
 
             if (!firebaseId) {
                 return res.status(400).json({ error: "Token faltante" });
@@ -100,7 +101,7 @@ export class AuthController {
             let user;
 
             if (existing.length === 0) {
-                const inserted = await this.authRepository.createUser(name, email, null, firebaseId);
+                const inserted = await this.authRepository.createUser(name, email, null, firebaseId, avatar);
                 user = inserted[0];
             } else {
                 user = existing[0];

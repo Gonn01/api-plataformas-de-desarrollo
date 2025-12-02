@@ -15,12 +15,12 @@ export class AuthRepository {
         );
     }
 
-    async createUser(name, email, hash, firebaseId) {
+    async createUser(name, email, hash, firebaseId, avatar) {
         return await executeQuery(
-            `INSERT INTO users (name, email, password, firebase_user_id, created_at)
-             VALUES ($1, $2, $3, $4, NOW())
+            `INSERT INTO users (name, email, password, firebase_user_id, avatar, created_at)
+             VALUES ($1, $2, $3, $4, $5, NOW())
              RETURNING id, name, email`,
-            [name, email, hash, firebaseId]
+            [name, email, hash, firebaseId, avatar]
         );
     }
 }
