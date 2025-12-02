@@ -10,7 +10,7 @@ export class EntidadesFinancierasController {
             const { userId } = req.session;
 
             const response = await this.entidadesFinancierasService.listar(userId);
-            console.log(response);
+
             res.json({
                 message: "Listado de entidades financieras",
                 data: response
@@ -34,7 +34,7 @@ export class EntidadesFinancierasController {
             });
         } catch (err) {
             logRed(err);
-            res.status(500).json({ error: "Error en el servidor" });
+            res.status(500).json({ error: "Error en el servidor: " + err.message });
         }
     };
 
@@ -67,7 +67,10 @@ export class EntidadesFinancierasController {
 
             const response = await this.entidadesFinancierasService.actualizar(id, name, userId);
 
-            res.json(response);
+            res.json({
+                message: "Entidad financiera actualizada con éxito",
+                data: response
+            });
         } catch (err) {
             logRed(err);
             res.status(500).json({ error: "Error en el servidor" });

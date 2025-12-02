@@ -24,7 +24,7 @@ export class EntidadesFinancierasRepository {
              FROM financial_entities
              WHERE id = $1 AND deleted = false AND user_id = $2
              LIMIT 1`,
-            [id, userId]
+            [id, userId], true
         );
     }
 

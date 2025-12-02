@@ -1,6 +1,8 @@
 export class EntidadesFinancierasService {
-    constructor(entidadesFinancierasRepository) {
+    constructor(entidadesFinancierasRepository, gastosRepository, logsRepository) {
         this.entidadesFinancierasRepository = entidadesFinancierasRepository;
+        this.gastosRepository = gastosRepository;
+        this.logsRepository = logsRepository;
     }
 
     async listar(userId) {
@@ -17,7 +19,7 @@ export class EntidadesFinancierasService {
         const gastos = await this.gastosRepository.getGastosByEntidad(id);
         const logs = await this.logsRepository.getLogsByEntidad(id);
         return {
-            entidad: entidad[0],
+            ...entidad[0],
             gastos_activos: gastos.filter(g => g.deleted === false),
             gastos_inactivos: gastos.filter(g => g.deleted === true),
             logs
