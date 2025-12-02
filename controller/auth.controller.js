@@ -49,7 +49,7 @@ export class AuthController {
         }
     }
 
-    firebaseLogin = async (req, res) => {
+    /* firebaseLogin = async (req, res) => {
         try {
             const { firebaseId, name, email, avatar } = req.body;
 
@@ -58,6 +58,29 @@ export class AuthController {
             }
 
             const response = await this.authService.firebaseLogin(firebaseId, name, email, avatar);
+
+            res.json({
+                message: "Login exitoso",
+                data: response,
+            });
+
+        } catch (err) {
+            logRed(err);
+            res.status(401).json({ error: "Token inválido" });
+        }
+    }; */
+
+    firebaseLogin = async (req, res) => {
+        try {
+            const { firebaseId, name, email, avatar } = req.body;
+
+            if (!firebaseId) {
+                return res.status(400).json({ error: "Token faltante" });
+            }
+            // etstaba asi (firebaseId, name, email, avatar)
+            // cambie el orden (name, email, avatar, firebaseId) 
+            const response = await this.authService.firebaseLogin(name, email, avatar, firebaseId);
+            // ----------------------------
 
             res.json({
                 message: "Login exitoso",
