@@ -11,7 +11,10 @@ export class DashboardController {
 
       const response = await this.dashboardService.getHomeData(userId);
 
-      res.json(response);
+      res.json({
+        message: "Datos del dashboard obtenidos con éxito",
+        data: response
+      });
     } catch (err) {
       logRed(err);
       res.status(500).json({ error: "Error en el servidor" });

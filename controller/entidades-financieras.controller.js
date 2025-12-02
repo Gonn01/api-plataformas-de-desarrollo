@@ -10,7 +10,7 @@ export class EntidadesFinancierasController {
             const { userId } = req.session;
 
             const response = await this.entidadesFinancierasService.listar(userId);
-
+            console.log(response);
             res.json({
                 message: "Listado de entidades financieras",
                 data: response
