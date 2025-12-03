@@ -23,6 +23,7 @@ export class DashboardController {
 
   crearGasto = async (req, res) => {
     try {
+      console.log("Crear Gasto - req.body:", req.body.type);
       const {
         financial_entity_id,
         name,
@@ -35,7 +36,7 @@ export class DashboardController {
         type
       } = req.body;
 
-      if (!financial_entity_id || !name || !amount || !number_of_quotas) {
+      if (!financial_entity_id || !name || !amount) {
         return res.status(400).json({ error: "Faltan campos obligatorios" });
       }
 

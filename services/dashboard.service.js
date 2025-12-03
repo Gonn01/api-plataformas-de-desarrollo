@@ -9,10 +9,10 @@ export class DashboardService {
         return await this.dashboardRepository.getHomeData(userId);
     }
 
-    async crearGasto(financial_entity_id, name, amount, number_of_quotas, currency_type, first_quota_date, fixed_expense, image) {
+    async crearGasto(financial_entity_id, name, amount, number_of_quotas, currency_type, first_quota_date, fixed_expense, image, type) {
         const amountPerQuota = Number(amount) / Number(number_of_quotas);
 
-        const inserted = await this.gastosRepository.create(financial_entity_id, name, amount, amountPerQuota, number_of_quotas, currency_type, first_quota_date, fixed_expense, image);
+        const inserted = await this.gastosRepository.create(financial_entity_id, name, amount, amountPerQuota, number_of_quotas, currency_type, first_quota_date ?? null, fixed_expense, image ?? null, type);
         return inserted;
     }
 
