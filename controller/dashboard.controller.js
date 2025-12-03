@@ -51,7 +51,10 @@ export class DashboardController {
         type
       );
 
-      res.status(201).json(inserted[0]);
+      res.status(201).json({
+        message: "Gasto creado con éxito",
+        data: inserted[0]
+      });
     } catch (err) {
       logRed(err);
       res.status(500).json({ error: "Error en el servidor" });
@@ -64,7 +67,10 @@ export class DashboardController {
 
       const updated = await this.dashboardService.pagarCuota(purchase_id);
 
-      res.json(updated[0]);
+      res.json({
+        message: "Cuota pagada con éxito",
+        data: updated[0]
+      });
     } catch (err) {
       logRed(err);
       res.status(500).json({ error: "Error en el servidor" });
