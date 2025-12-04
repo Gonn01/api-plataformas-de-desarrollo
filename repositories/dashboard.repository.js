@@ -14,6 +14,7 @@ export class DashboardRepository {
                   'amount', g.amount,
                   'number_of_quotas', g.number_of_quotas,
                   'payed_quotas', g.payed_quotas,
+                  'currency_type', g.currency_type,
                   'type', g.type,
                   'fixed_expense', g.fixed_expense
                 )

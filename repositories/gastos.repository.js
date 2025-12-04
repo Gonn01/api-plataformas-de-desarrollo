@@ -67,12 +67,13 @@ export class GastosRepository {
     }
 
     async update(id, name, amount, image, fixed_expense, type) {
+        const dbType = type ? String(type).toUpperCase() : null;
         return await executeQuery(
             `UPDATE purchases 
              SET name = $1, amount = $2, image = $3, fixed_expense = $4, type = $5
              WHERE id = $6
              RETURNING *`,
-            [name, amount, image || null, fixed_expense || false, type, id]
+            [name, amount, image || null, fixed_expense || false, dbType, id]
         );
     }
 
@@ -84,16 +85,16 @@ export class GastosRepository {
     }
 
     async create(
-        financial_entity_id,
-        name,
-        amount,
-        amountPerQuota,
-        number_of_quotas,
-        currency_type,
-        first_quota_date,
-        fixed_expense,
-        image,
-        type
+    financial_entity_id,
+    name,
+    amount,
+    amountPerQuota,
+    number_of_quotas,
+    currency_type,
+    first_quota_date,
+    fixed_expense,
+    image,
+    type
     ) {
         console.log("financial_entity_id:", financial_entity_id);
         console.log("name:", name);
@@ -105,12 +106,16 @@ export class GastosRepository {
         console.log("fixed_expense:", fixed_expense);
         console.log("image:", image);
         console.log("type:", type);
+
+        const dbType = type ? String(type).toUpperCase() : null;
+
         return await executeQuery(
             `INSERT INTO purchases (
-        financial_entity_id, name, amount, amount_per_quota, number_of_quotas,
-        payed_quotas, currency_type, first_quota_date, finalization_date,
-        fixed_expense, deleted, image, created_at, type)
-         VALUES ($1,$2,$3,$4,$5,0,$6,$7,NULL,$8,false,$9,now(),$10)
+                financial_entity_id, name, amount, amount_per_quota, number_of_quotas,
+                payed_quotas, currency_type, first_quota_date, finalization_date,
+                fixed_expense, deleted, image, created_at, type
+            )
+            VALUES ($1,$2,$3,$4,$5,0,$6,$7,NULL,$8,false,$9,now(),$10)
             RETURNING *`,
             [
                 financial_entity_id,
@@ -122,8 +127,9 @@ export class GastosRepository {
                 first_quota_date,
                 fixed_expense || false,
                 image || null,
-                type || null
-            ], true
-        );
-    }
+                dbType,   
+            ],
+        true,
+    );
+}
 }
