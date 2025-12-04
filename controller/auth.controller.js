@@ -66,7 +66,7 @@ export class AuthController {
 
         } catch (err) {
             logRed(err);
-            res.status(401).json({ error: "Token inválido" });
+            res.status(500).json({ error: "Error en el servidor" });
         }
     };
 }

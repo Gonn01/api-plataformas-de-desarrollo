@@ -1,13 +1,9 @@
 import express from "express";
-import { AuthController } from "../controller/auth.controller.js";
-import { AuthRepository } from "../repositories/auth.repository.js";
-import { AuthService } from "../services/auth.service.js";
+import { makeAuthController } from "../factories/auth.factory.js";
 
 const router = express.Router();
 
-const authRepository = new AuthRepository();
-const authService = new AuthService(authRepository);
-const authController = new AuthController(authService);
+const authController = makeAuthController();
 
 router.post("/register", authController.register);
 router.post("/login", authController.login);
