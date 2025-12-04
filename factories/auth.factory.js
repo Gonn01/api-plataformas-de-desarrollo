@@ -5,7 +5,7 @@ import { AuthService } from "../services/auth.service.js";
 export function makeAuthController() {
     const authRepository = new AuthRepository();
 
-    const authService = new AuthService(authRepository);
+    const authService = new AuthService({ authRepository });
 
     const authController = new AuthController(authService);
 
