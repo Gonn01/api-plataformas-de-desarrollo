@@ -11,7 +11,11 @@ const entidadesFinancierasRepository = new EntidadesFinancierasRepository();
 const gastosRepository = new GastosRepository();
 const logsRepository = new LogsRepository();
 
-const entidadesFinancierasService = new EntidadesFinancierasService(entidadesFinancierasRepository, gastosRepository, logsRepository);
+const entidadesFinancierasService = new EntidadesFinancierasService({
+    entidadesFinancierasRepository,
+    gastosRepository,
+    logsRepository
+});
 
 const entidadesFinancierasController = new EntidadesFinancierasController(entidadesFinancierasService);
 

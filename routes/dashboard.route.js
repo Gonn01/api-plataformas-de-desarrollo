@@ -13,7 +13,12 @@ const gastosRepository = new GastosRepository();
 const entidadesFinancierasRepository = new EntidadesFinancierasRepository();
 const logsRepository = new LogsRepository();
 
-const dashboardService = new DashboardService(dashboardRepository, gastosRepository, entidadesFinancierasRepository, logsRepository);
+const dashboardService = new DashboardService({
+    dashboardRepository,
+    gastosRepository,
+    entidadesFinancierasRepository,
+    logsRepository
+});
 
 const dashboardController = new DashboardController(dashboardService);
 
