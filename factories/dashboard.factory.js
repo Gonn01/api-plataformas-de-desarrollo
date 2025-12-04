@@ -1,9 +1,9 @@
-import { DashboardController } from "../controller/dashboard.controller";
-import { DashboardRepository } from "../repositories/dashboard.repository";
-import { EntidadesFinancierasRepository } from "../repositories/entidades-financieras.repository";
-import { GastosRepository } from "../repositories/gastos.repository";
-import { LogsRepository } from "../repositories/logs.repository";
-import { DashboardService } from "../services/dashboard.service";
+import { DashboardController } from "../controller/dashboard.controller.js";
+import { DashboardRepository } from "../repositories/dashboard.repository.js";
+import { EntidadesFinancierasRepository } from "../repositories/entidades-financieras.repository.js";
+import { GastosRepository } from "../repositories/gastos.repository.js";
+import { LogsRepository } from "../repositories/logs.repository.js";
+import { DashboardService } from "../services/dashboard.service.js";
 
 export function makeFactoryController() {
     const dashboardRepository = new DashboardRepository();

@@ -1,8 +1,8 @@
-import { EntidadesFinancierasController } from "../controller/entidades-financieras.controller";
-import { EntidadesFinancierasRepository } from "../repositories/entidades-financieras.repository";
-import { GastosRepository } from "../repositories/gastos.repository";
-import { LogsRepository } from "../repositories/logs.repository";
-import { EntidadesFinancierasService } from "../services/entidades-financieras.service";
+import { EntidadesFinancierasController } from "../controller/entidades-financieras.controller.js";
+import { EntidadesFinancierasRepository } from "../repositories/entidades-financieras.repository.js";
+import { GastosRepository } from "../repositories/gastos.repository.js";
+import { LogsRepository } from "../repositories/logs.repository.js";
+import { EntidadesFinancierasService } from "../services/entidades-financieras.service.js";
 
 export function makeEntidadesFinancierasController() {
     const gastosRepository = new GastosRepository();

@@ -1,7 +1,7 @@
-import { GastosController } from "../controller/gastos.controller";
-import { GastosRepository } from "../repositories/gastos.repository";
-import { LogsRepository } from "../repositories/logs.repository";
-import { GastosService } from "../services/gastos.service";
+import { GastosController } from "../controller/gastos.controller.js";
+import { GastosRepository } from "../repositories/gastos.repository.js";
+import { LogsRepository } from "../repositories/logs.repository.js";
+import { GastosService } from "../services/gastos.service.js";
 
 export function makeGastosController() {
     const gastosRepository = new GastosRepository();
