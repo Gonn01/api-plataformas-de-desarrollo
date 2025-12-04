@@ -81,10 +81,25 @@ export class DashboardService {
         return updated;
     }
 
+    // dashboard.service.js
+
+    // ... (otros métodos)
+
     async pagarCuotasLote(purchaseIds) {
-        purchaseIds.forEach(async element => {
-            await this.logsRepository.createGastoLog(element, "Cuota pagada por lote");
+
+        if (!Array.isArray(purchaseIds) || purchaseIds.length === 0) {
+            throw new Error("La lista de IDs de compra es inválida.");
+        }
+
+        const logPromises = purchaseIds.map(element => {
+            return this.logsRepository.createGastoLog(
+                element,
+                `Cuota pagada por lote`
+            );
         });
+
+        await Promise.all(logPromises);
+
         return await this.gastosRepository.pagarCuotasLote(purchaseIds);
     }
 }
