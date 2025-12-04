@@ -1,53 +1,59 @@
 export class DashboardService {
-    constructor(dashboardRepository, gastosRepository, entidadesFinancierasRepository) {
+    constructor({ dashboardRepository,
+        gastosRepository,
+        entidadesFinancierasRepository,
+        logsRepository
+    }) {
         this.dashboardRepository = dashboardRepository;
         this.gastosRepository = gastosRepository;
         this.entidadesFinancierasRepository = entidadesFinancierasRepository;
+        this.logsRepository = logsRepository;
     }
 
     async getHomeData(userId) {
         return await this.dashboardRepository.getHomeData(userId);
     }
 
-/*     async crearGasto(financial_entity_id, name, amount, number_of_quotas, currency_type, first_quota_date, fixed_expense, image, type) {
-        const amountPerQuota = Number(amount) / Number(number_of_quotas);
-
-        const inserted = await this.gastosRepository.create(financial_entity_id, name, amount, amountPerQuota, number_of_quotas, currency_type, first_quota_date ?? null, fixed_expense, image ?? null, type);
-        return inserted;
-    } */
+    /*     async crearGasto(financial_entity_id, name, amount, number_of_quotas, currency_type, first_quota_date, fixed_expense, image, type) {
+            const amountPerQuota = Number(amount) / Number(number_of_quotas);
+    
+            const inserted = await this.gastosRepository.create(financial_entity_id, name, amount, amountPerQuota, number_of_quotas, currency_type, first_quota_date, fixed_expense, image);
+            await this.logsRepository.createGastoLog(inserted.id, `Gasto "${name}" creado con monto total ${amount} y ${number_of_quotas} cuotas de ${amountPerQuota} cada una.`);
+            return inserted;
+        } */
 
     async crearGasto(
-    financial_entity_id,
-    name,
-    amount,
-    number_of_quotas,
-    currency_type,
-    first_quota_date,
-    fixed_expense,
-    image,
-    type
-) {
-
-    // el temita del debo
-    const typeFormatted = type ? type.toUpperCase() : null;
-
-    const amountPerQuota = Number(amount) / Number(number_of_quotas);
-
-    const inserted = await this.gastosRepository.create(
         financial_entity_id,
         name,
         amount,
-        amountPerQuota,
         number_of_quotas,
         currency_type,
-        first_quota_date ?? null,
+        first_quota_date,
         fixed_expense,
-        image ?? null,
-        typeFormatted 
-    );
+        image,
+        type
+    ) {
 
-    return inserted;
-}
+        // el temita del debo
+        const typeFormatted = type ? type.toUpperCase() : null;
+
+        const amountPerQuota = Number(amount) / Number(number_of_quotas);
+
+        const inserted = await this.gastosRepository.create(
+            financial_entity_id,
+            name,
+            amount,
+            amountPerQuota,
+            number_of_quotas,
+            currency_type,
+            first_quota_date ?? null,
+            fixed_expense,
+            image ?? null,
+            typeFormatted
+        );
+
+        return inserted;
+    }
 
     async pagarCuota(purchase_id) {
         const rows = await this.gastosRepository.getById(purchase_id);
@@ -69,10 +75,15 @@ export class DashboardService {
             finalization
         );
 
+        await this.logsRepository.createGastoLog(purchase_id, "Cuota pagada. Total de cuotas pagadas: " + newPayed);
+
         return updated;
     }
 
     async pagarCuotasLote(purchaseIds) {
+        purchaseIds.forEach(async element => {
+            await this.logsRepository.createGastoLog(element, "Cuota pagada por lote");
+        });
         return await this.gastosRepository.pagarCuotasLote(purchaseIds);
     }
 }
