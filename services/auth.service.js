@@ -3,7 +3,9 @@ import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config/env.js";
 
 export class AuthService {
-    constructor(authRepository) {
+    constructor({
+        authRepository
+    }) {
         this.authRepository = authRepository;
     }
     async login(email, password) {

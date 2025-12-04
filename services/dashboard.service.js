@@ -1,5 +1,6 @@
 export class DashboardService {
-    constructor({ dashboardRepository,
+    constructor({
+        dashboardRepository,
         gastosRepository,
         entidadesFinancierasRepository,
         logsRepository

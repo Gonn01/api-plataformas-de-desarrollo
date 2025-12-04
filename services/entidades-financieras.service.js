@@ -1,5 +1,9 @@
 export class EntidadesFinancierasService {
-    constructor(entidadesFinancierasRepository, gastosRepository, logsRepository) {
+    constructor({
+        entidadesFinancierasRepository,
+        gastosRepository,
+        logsRepository
+    }) {
         this.entidadesFinancierasRepository = entidadesFinancierasRepository;
         this.gastosRepository = gastosRepository;
         this.logsRepository = logsRepository;
@@ -27,7 +31,9 @@ export class EntidadesFinancierasService {
     }
 
     async crear(name, userId) {
-        return await this.entidadesFinancierasRepository.create(name, userId);
+        const [row] = await this.entidadesFinancierasRepository.create(name, userId);
+        await this.logsRepository.createEntidadLog(row.insertedId, `Entidad financiera "${name}" creada.`);
+
     }
 
     async actualizar(id, name, userId) {
@@ -38,18 +44,20 @@ export class EntidadesFinancierasService {
             throw new Error("Entidad no encontrada");
         }
 
-        const updatedRows = await this.entidadesFinancierasRepository.update(id, name, userId);
-        return updatedRows[0];
+        const [row] = await this.entidadesFinancierasRepository.update(id, name, userId);
+
+        await this.logsRepository.createEntidadLog(id, "Entidad financiera actualizada")
+        return row;
     }
 
     async eliminar(id, userId) {
 
-        const deletedRows = await this.entidadesFinancierasRepository.delete(id, userId);
+        const [row] = await this.entidadesFinancierasRepository.delete(id, userId);
 
-        if (deletedRows.length === 0) {
+        if (row.length === 0) {
             throw new Error("Entidad no encontrada");
         }
-
-        return deletedRows[0];
+        await this.logsRepository.createEntidadLog(id, "Entidad financiera eliminada")
+        return row;
     }
 }
