@@ -23,7 +23,6 @@ export class DashboardController {
 
   crearGasto = async (req, res) => {
     try {
-      console.log("Crear Gasto - req.body:", req.body.type);
       const {
         financial_entity_id,
         name,
