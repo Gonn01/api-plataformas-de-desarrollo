@@ -83,39 +83,41 @@ export class GastosRepository {
     );
   }
 
-  async create(
-    financial_entity_id,
-    name,
-    amount,
-    amountPerQuota,
-    number_of_quotas,
-    currency_type,
-    first_quota_date,
-    fixed_expense,
-    image,
-    type
-  ) {
-    const dbType = type ? String(type).toUpperCase() : null;
-
-    return await executeQuery(
-      `INSERT INTO purchases (
-                financial_entity_id, name, amount, amount_per_quota, number_of_quotas,
-                payed_quotas, currency_type, first_quota_date, finalization_date,
-                fixed_expense, deleted, image, created_at, type
-            )
-            VALUES ($1,$2,$3,$4,$5,0,$6,$7,NULL,$8,false,$9,now(),$10)
-            RETURNING *`,
-      [
+    async create(
         financial_entity_id,
         name,
         amount,
         amountPerQuota,
         number_of_quotas,
+        payed_quotas,
         currency_type,
         first_quota_date,
-        fixed_expense || false,
-        image || null,
-        dbType,
+        fixed_expense,
+        image,
+        type
+  ) {
+    const dbType = type ? String(type).toUpperCase() : null;
+
+    return await executeQuery(
+      `INSERT INTO purchases (
+        financial_entity_id, name, amount, amount_per_quota, number_of_quotas,
+        payed_quotas, currency_type, first_quota_date, finalization_date,
+        fixed_expense, deleted, image, created_at, type
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NULL,$9,false,$10,now(),$11)
+      RETURNING *`,
+      [
+        financial_entity_id,    // $1
+        name,                   // $2
+        amount,                 // $3
+        amountPerQuota,         // $4
+        number_of_quotas,       // $5
+        safePayed,              // $6 -> payed_quotas
+        safeCurrency,           // $7 -> currency_type
+        firstQuotaDateDb,       // $8 -> first_quota_date
+        fixed_expense || false, // $9 -> fixed_expense
+        image || null,          // $10 -> image
+        dbType,                 // $11 -> type
       ],
       true
     );

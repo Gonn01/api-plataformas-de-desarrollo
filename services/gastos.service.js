@@ -44,27 +44,28 @@ export class GastosService {
         first_quota_date,
         fixed_expense,
         image,
-        type
-    ) {
-        const typeFormatted = type ? type.toUpperCase() : null;
+        type,
+        payed_quotas = 0
+  ) {
+    const num = Number(number_of_quotas) || 0;
+    const amt = Number(amount) || 0;
+    const amountPerQuota = num > 0 ? amt / num : amt;
+    const safePayed = Number(payed_quotas) || 0;
 
-        const amountPerQuota = Number(amount) / Number(number_of_quotas);
-
-        const inserted = await this.gastosRepository.create(
-            financial_entity_id,
-            name,
-            amount,
-            amountPerQuota,
-            number_of_quotas,
-            currency_type,
-            first_quota_date ?? null,
-            fixed_expense,
-            image ?? null,
-            typeFormatted
-        );
-
-        return inserted;
-    }
+    return this.gastosRepository.create(
+        financial_entity_id, // $1
+        name,                // $2
+        amt,                 // $3
+        amountPerQuota,      // $4
+        num,                 // $5
+        safePayed,           // $6
+        currency_type,       // $7
+        first_quota_date,    // $8
+        fixed_expense,       // $9
+        image,               // $10
+        type                 // $11
+    );
+  }
 
     async pagarCuota(purchase_id) {
         const rows = await this.gastosRepository.getById(purchase_id);
