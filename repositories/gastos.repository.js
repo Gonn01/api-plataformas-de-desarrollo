@@ -28,13 +28,21 @@ export class GastosRepository {
     );
   }
 
-  async pagarCuota(id, newPayed, finalization) {
+  async pagarCuota(id) {
     return await executeQuery(
       `UPDATE purchases
-             SET payed_quotas = $1, finalization_date = $2
-             WHERE id = $3
+             SET payed_quotas = payed_quotas + 1,
+             finalization_date = CASE
+               WHEN fixed_expense = false AND payed_quotas + 1 >= number_of_quotas THEN now()
+               ELSE finalization_date
+             END,
+             first_quota_date = CASE
+               WHEN payed_quotas + 1 = 1 THEN now()
+               ELSE first_quota_date
+             END
+             WHERE id = $1
              RETURNING *`,
-      [newPayed, finalization, id]
+      [id]
     );
   }
 
@@ -44,11 +52,15 @@ export class GastosRepository {
       const result = await executeQuery(
         `UPDATE purchases
                  SET
-                   payed_quotas = LEAST(payed_quotas + 1, number_of_quotas),
-                     finalization_date = CASE
-                       WHEN payed_quotas + 1 >= number_of_quotas THEN now()
-                       ELSE finalization_date
-                     END
+                   payed_quotas = payed_quotas + 1,
+                   finalization_date = CASE
+                     WHEN fixed_expense = false AND payed_quotas + 1 >= number_of_quotas THEN now()
+                     ELSE finalization_date
+                   END,
+                   first_quota_date = CASE
+                     WHEN payed_quotas + 1 = 1 THEN now()
+                     ELSE first_quota_date
+                   END
                  WHERE id = $1
                  RETURNING
                    id, name, number_of_quotas, payed_quotas,

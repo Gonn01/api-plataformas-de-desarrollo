@@ -74,20 +74,9 @@ export class GastosService {
             throw new Error("Gasto no encontrado");
         }
 
-        const purchase = rows[0];
+        const updated = await this.gastosRepository.pagarCuota(purchase_id);
 
-        const newPayed = Number(purchase.payed_quotas) + 1;
-
-        const finalization =
-            newPayed >= Number(purchase.number_of_quotas) ? new Date() : null;
-
-        const updated = await this.gastosRepository.pagarCuota(
-            purchase_id,
-            newPayed,
-            finalization
-        );
-
-        await this.logsRepository.createGastoLog(purchase_id, "Cuota pagada. Total de cuotas pagadas: " + newPayed);
+        await this.logsRepository.createGastoLog(purchase_id, "Cuota pagada.");
 
         return updated;
     }
