@@ -3,10 +3,13 @@ import { makeGastosController } from '../factories/gastos.factory.js';
 
 const router = Router();
 
-const gastosController = makeGastosController();
+const controller = makeGastosController();
 
-router.get('/:id', gastosController.getById);
-router.put('/:id', gastosController.update);
-router.delete('/:id', gastosController.delete);
+router.post("/", controller.crear);
+router.get('/:id', controller.getById);
+router.put('/:id', controller.update);
+router.delete('/:id', controller.delete);
+router.post("/:id/pagar-cuota", controller.pagarCuota);
+router.post("/pagar-lote", controller.pagarCuotasLote);
 
 export default router;

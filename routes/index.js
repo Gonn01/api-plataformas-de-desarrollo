@@ -14,3 +14,4 @@ router.use("/dashboard", dashboardRoutes)
 router.use('/gastos', gastosRoutes);
 
 export default router;
+

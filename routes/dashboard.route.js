@@ -1,13 +1,10 @@
 import express from "express";
-import { makeFactoryController } from "../factories/dashboard.factory.js";
+import { makeDashboardController } from "../factories/dashboard.factory.js";
 
 const router = express.Router();
 
-const dashboardController = makeFactoryController();
+const controller = makeDashboardController();
 
-router.get("/home", dashboardController.home);
-router.post("/gastos", dashboardController.crearGasto);
-router.post("/pagar-cuota", dashboardController.pagarCuota);
-router.post("/pagar-cuotas-lote", dashboardController.pagarCuotasLote);
+router.get("/", controller.home);
 
 export default router;

@@ -3,12 +3,12 @@ import { makeEntidadesFinancierasController } from "../factories/entidades_finan
 
 const router = express.Router();
 
-const entidadesFinancierasController = makeEntidadesFinancierasController();
+const controller = makeEntidadesFinancierasController();
 
-router.get("/", entidadesFinancierasController.listar);
-router.get("/:id", entidadesFinancierasController.obtenerPorId);
-router.post("/", entidadesFinancierasController.crear);
-router.delete("/:id", entidadesFinancierasController.eliminar);
-router.put("/:id", entidadesFinancierasController.actualizar);
+router.get("/", controller.listar);
+router.get("/:id", controller.obtenerPorId);
+router.post("/", controller.crear);
+router.delete("/:id", controller.eliminar);
+router.put("/:id", controller.actualizar);
 
 export default router;

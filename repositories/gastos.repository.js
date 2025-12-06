@@ -96,17 +96,6 @@ export class GastosRepository {
     image,
     type
   ) {
-    console.log("financial_entity_id:", financial_entity_id);
-    console.log("name:", name);
-    console.log("amount:", amount);
-    console.log("amountPerQuota:", amountPerQuota);
-    console.log("number_of_quotas:", number_of_quotas);
-    console.log("currency_type:", currency_type);
-    console.log("first_quota_date:", first_quota_date);
-    console.log("fixed_expense:", fixed_expense);
-    console.log("image:", image);
-    console.log("type:", type);
-
     const dbType = type ? String(type).toUpperCase() : null;
 
     return await executeQuery(
