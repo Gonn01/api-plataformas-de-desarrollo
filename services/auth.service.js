@@ -63,4 +63,18 @@ export class AuthService {
 
         await this.authRepository.createUser(name, email, hash, firebaseId);
     }
+
+
+    async updatePreferredCurrency(userId, preferredCurrency) {
+        const rows = await this.authRepository.updatePreferredCurrency(
+            userId,
+            preferredCurrency
+        );
+
+        if (rows.length === 0) {
+            throw new Error("Usuario no encontrado");
+        }
+
+        return rows[0];
+    }
 }

@@ -56,14 +56,45 @@ export class AuthController {
             if (!firebaseId) {
                 return res.status(400).json({ error: "Token faltante" });
             }
-
             const response = await this.authService.firebaseLogin(name, email, avatar, firebaseId);
-
             res.json({
                 message: "Login exitoso",
                 data: response,
             });
 
+        } catch (err) {
+            logRed(err);
+            res.status(500).json({ error: "Error en el servidor" });
+        }
+    };
+
+    updatePreferredCurrency = async (req, res) => {
+        try {
+            const { user_id, preferred_currency } = req.body;
+
+            if (!user_id) {
+                return res
+                    .status(400)
+                    .json({ error: "Debe enviar 'user_id'" });
+            }
+
+            if (preferred_currency === undefined || preferred_currency === null) {
+                return res
+                    .status(400)
+                    .json({ error: "Debe enviar 'preferred_currency'" });
+            }
+
+            const numericCurrency = Number(preferred_currency);
+
+            const updated = await this.authService.updatePreferredCurrency(
+                Number(user_id),
+                numericCurrency
+            );
+
+            res.json({
+                message: "Moneda preferida actualizada",
+                data: updated,
+            });
         } catch (err) {
             logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
