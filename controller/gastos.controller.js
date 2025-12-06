@@ -9,43 +9,43 @@ export class GastosController {
 
     crear = async (req, res) => {
         try {
-        const {
-            financial_entity_id,
-            name,
-            amount,
-            number_of_quotas,
-            currency_type,
-            first_quota_date,
-            fixed_expense,
-            image,
-            type,
-            payed_quotas, 
-        } = req.body;
+            const {
+                financial_entity_id,
+                name,
+                amount,
+                number_of_quotas,
+                currency_type,
+                first_quota_date,
+                fixed_expense,
+                image,
+                type,
+                payed_quotas,
+            } = req.body;
 
-        if (!financial_entity_id || !name || !amount) {
-            return res.status(400).json({ error: "Faltan campos obligatorios" });
-        }
+            if (!financial_entity_id || !name || !amount) {
+                return res.status(400).json({ error: "Faltan campos obligatorios" });
+            }
 
-        const inserted = await this.gastosService.crearGasto(
-            financial_entity_id,
-            name,
-            amount,
-            number_of_quotas,
-            currency_type,
-            first_quota_date,
-            fixed_expense,
-            image,
-            type,
-            payed_quotas
-        );
+            const inserted = await this.gastosService.crearGasto(
+                financial_entity_id,
+                name,
+                amount,
+                number_of_quotas,
+                currency_type,
+                first_quota_date,
+                fixed_expense,
+                image,
+                type,
+                payed_quotas
+            );
 
-        res.status(201).json({
-            message: "Gasto creado con éxito",
-            data: inserted[0],
-        });
+            res.status(201).json({
+                message: "Gasto creado con éxito",
+                data: inserted[0],
+            });
         } catch (err) {
-        logRed(err);
-        res.status(500).json({ error: "Error en el servidor" });
+            logRed(err);
+            res.status(500).json({ error: "Error en el servidor" });
         }
     };
 

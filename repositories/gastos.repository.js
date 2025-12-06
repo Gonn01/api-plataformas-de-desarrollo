@@ -85,7 +85,7 @@ export class GastosRepository {
     );
   }
 
-  async create(
+  async create({
     financial_entity_id,
     name,
     amount,
@@ -97,7 +97,7 @@ export class GastosRepository {
     fixed_expense,
     image,
     type
-  ) {
+  }) {
     const dbType = type ? String(type).toUpperCase() : null;
 
     return await executeQuery(
