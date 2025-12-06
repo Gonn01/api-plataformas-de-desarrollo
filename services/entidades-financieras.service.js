@@ -56,7 +56,7 @@ export class EntidadesFinancierasService {
 
     const [row] = await this.entidadesFinancierasRepository.update(id, name, userId);
 
-    await this.logsRepository.createEntidadLog(id, "Entidad financiera actualizada");
+    await this.logsRepository.createEntidadLog(id, "Entidad financiera actualizada de '" + currentRows[0].name + "' a: '" + name + "'");
 
     return row;
   }
@@ -71,5 +71,9 @@ export class EntidadesFinancierasService {
     await this.logsRepository.createEntidadLog(id, "Entidad financiera eliminada");
 
     return deletedRows[0];
+  }
+
+  async obtenerLogs(id) {
+    return await this.logsRepository.getLogsByEntidad(id);
   }
 }

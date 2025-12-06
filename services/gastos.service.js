@@ -95,4 +95,8 @@ export class GastosService {
 
         return await this.gastosRepository.pagarCuotasLote(purchaseIds);
     }
+
+    async obtenerLogsPorGasto(gastoId) {
+        return await this.logsRepository.getLogsByGasto(gastoId);
+    }
 }
