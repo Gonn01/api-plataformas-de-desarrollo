@@ -22,7 +22,6 @@ export class EntidadesFinancierasService {
 
     const entity = entidad[0];
     const gastos = await this.gastosRepository.getGastosByEntidad(id);
-
     const gastosActivos = gastos.filter(g => Number(g.payed_quotas) < Number(g.number_of_quotas) && !g.fixed_expense);
     const gastosFinalizados = gastos.filter(g => Number(g.payed_quotas) >= Number(g.number_of_quotas) && !g.fixed_expense);
     const gastosFijos = gastos.filter(g => g.fixed_expense);

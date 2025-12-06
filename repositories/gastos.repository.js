@@ -10,20 +10,10 @@ export class GastosRepository {
 
   async getGastosByEntidad(entidadId) {
     return await executeQuery(
-      `SELECT 
-                id,
-                name,
-                amount,
-                amount_per_quota,
-                number_of_quotas,
-                payed_quotas,
-                currency_type,
-                fixed_expense,
-                type,
-                deleted
-             FROM purchases
-             WHERE financial_entity_id = $1 AND deleted = false
-             ORDER BY created_at DESC`,
+      `SELECT *
+      FROM purchases
+      WHERE financial_entity_id = $1 AND deleted = false
+      ORDER BY created_at DESC`,
       [entidadId]
     );
   }
