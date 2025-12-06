@@ -23,8 +23,9 @@ export class EntidadesFinancierasService {
     const entity = entidad[0];
     const gastos = await this.gastosRepository.getGastosByEntidad(id);
 
-    const gastosActivos = gastos.filter(g => Number(g.payed_quotas) < Number(g.number_of_quotas));
-    const gastosFinalizados = gastos.filter(g => Number(g.payed_quotas) >= Number(g.number_of_quotas));
+    const gastosActivos = gastos.filter(g => Number(g.payed_quotas) < Number(g.number_of_quotas) && !g.fixed_expense);
+    const gastosFinalizados = gastos.filter(g => Number(g.payed_quotas) >= Number(g.number_of_quotas) && !g.fixed_expense);
+    const gastosFijos = gastos.filter(g => g.fixed_expense);
 
     const logs = await this.logsRepository.getLogsByEntidad(id);
 
@@ -34,6 +35,7 @@ export class EntidadesFinancierasService {
       created_at: entity.created_at,
       gastos_activos: gastosActivos,
       gastos_inactivos: gastosFinalizados,
+      gastos_fijos: gastosFijos,
       logs,
     };
   }
