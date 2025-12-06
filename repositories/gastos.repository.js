@@ -4,7 +4,7 @@ export class GastosRepository {
   async getById(id) {
     return await executeQuery(
       `SELECT * FROM purchases WHERE id = $1 AND deleted = false`,
-      [id]
+      [id], true
     );
   }
 

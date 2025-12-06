@@ -5,12 +5,14 @@ export class GastosService {
     }
 
     async getById(id) {
-        const [row] = await this.gastosRepository.getById(id);
+        const row = await this.gastosRepository.getById(id);
 
         if (row.length === 0) {
             throw new Error("Gasto no encontrado");
         }
-        return row;
+        const logs = await this.logsRepository.getLogsByGasto(id);
+        row[0].logs = logs;
+        return row[0];
     }
 
     async update(id, name, amount, image, fixed_expense) {

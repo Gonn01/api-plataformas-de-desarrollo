@@ -17,7 +17,7 @@ export class LogsRepository {
              FROM purchases_logs
              WHERE purchase_id = $1
              ORDER BY created_at DESC`,
-            [gastoId]
+            [gastoId], true
         );
     }
 
