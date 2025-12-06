@@ -12,7 +12,6 @@ export class GastosRepository {
     return await executeQuery(
       `SELECT 
                 id,
-                created_at,
                 name,
                 amount,
                 amount_per_quota,
@@ -23,7 +22,7 @@ export class GastosRepository {
                 type,
                 deleted
              FROM purchases
-             WHERE financial_entity_id = $1
+             WHERE financial_entity_id = $1 AND deleted = false
              ORDER BY created_at DESC`,
       [entidadId]
     );

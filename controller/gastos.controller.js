@@ -25,7 +25,7 @@ export class GastosController {
                 return res.status(400).json({ error: "Faltan campos obligatorios" });
             }
 
-            const inserted = await this.dashboardService.crearGasto(
+            const inserted = await this.gastosService.crearGasto(
                 financial_entity_id,
                 name,
                 amount,

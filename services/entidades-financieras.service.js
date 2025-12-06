@@ -6,7 +6,13 @@ export class EntidadesFinancierasService {
   }
 
   async listar(userId) {
-    return await this.entidadesFinancierasRepository.listar(userId);
+    const entidades = await this.entidadesFinancierasRepository.listar(userId);
+    for (const entidad of entidades) {
+      const gastos = await this.gastosRepository.getGastosByEntidad(entidad.id);
+      const gastosActivos = gastos.filter(g => (Number(g.payed_quotas) < Number(g.number_of_quotas) || g.fixed_expense));
+      entidad.cantidad = gastosActivos.length;
+    }
+    return entidades;
   }
 
   async obtenerPorId(id, userId) {

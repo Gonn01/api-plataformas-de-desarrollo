@@ -3,7 +3,7 @@ import { executeQuery } from "../db.js";
 export class EntidadesFinancierasRepository {
     async listar(userId) {
         return await executeQuery(
-            `SELECT * FROM financial_entities WHERE deleted = false AND user_id = $1 ORDER BY created_at DESC`,
+            `SELECT id, name FROM financial_entities WHERE deleted = false AND user_id = $1 ORDER BY created_at DESC`,
             [userId],
         );
     }
