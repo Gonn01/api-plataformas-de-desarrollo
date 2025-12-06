@@ -95,18 +95,18 @@ export class GastosRepository {
     );
   }
 
-    async create(
-        financial_entity_id,
-        name,
-        amount,
-        amountPerQuota,
-        number_of_quotas,
-        payed_quotas,
-        currency_type,
-        first_quota_date,
-        fixed_expense,
-        image,
-        type
+  async create(
+    financial_entity_id,
+    name,
+    amount,
+    amountPerQuota,
+    number_of_quotas,
+    payed_quotas,
+    currency_type,
+    first_quota_date,
+    fixed_expense,
+    image,
+    type
   ) {
     const dbType = type ? String(type).toUpperCase() : null;
 
@@ -124,9 +124,9 @@ export class GastosRepository {
         amount,                 // $3
         amountPerQuota,         // $4
         number_of_quotas,       // $5
-        safePayed,              // $6 -> payed_quotas
-        safeCurrency,           // $7 -> currency_type
-        firstQuotaDateDb,       // $8 -> first_quota_date
+        payed_quotas,              // $6 -> payed_quotas
+        currency_type,           // $7 -> currency_type
+        first_quota_date,       // $8 -> first_quota_date
         fixed_expense || false, // $9 -> fixed_expense
         image || null,          // $10 -> image
         dbType,                 // $11 -> type
