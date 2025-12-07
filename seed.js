@@ -1,35 +1,13 @@
-import postgres from "postgres";
 import { faker } from "@faker-js/faker";
-import { DATABASE_URL } from "./config/env.js";
-import { logCyan, logGreen } from "./utils/logs_custom.js";
+import { logGreen, logCyan, logBlue } from "./utils/logs_custom.js";
+import { executeQuery } from "./db.js";
 
-const connectionString = DATABASE_URL;
-const sql = postgres(connectionString, { ssl: "require" });
-
-// -----------------------------------------------------------
-// Helpers
-// -----------------------------------------------------------
-
-async function insertOne(query, values = []) {
-    const rows = await sql.unsafe(query, values);
-    return rows[0];
-}
-
-function randomChoice(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
-}
-
-// Usuarios propietarios de entidades y gastos
-const USERS = [16, 17];
-
-// -----------------------------------------------------------
-// SEED PRINCIPAL
-// -----------------------------------------------------------
+const USERS = [17];
 
 async function runSeed() {
     logGreen("🌱 Iniciando seed…");
 
-    await sql.unsafe(`
+    await executeQuery(`
         TRUNCATE TABLE 
             purchases_logs,
             purchases,
@@ -38,10 +16,6 @@ async function runSeed() {
         RESTART IDENTITY CASCADE;
     `);
 
-    // ===============================================================
-    // 1) Crear ENTIDADES FINANCIERAS para usuarios 9, 11 y 13
-    // ===============================================================
-
     const entityNames = [
         "Banco Galicia",
         "Mercado Pago",
@@ -49,7 +23,7 @@ async function runSeed() {
         "Santander",
         "Naranja X",
         "HSBC",
-        "Brubank",
+        "Brubank"
     ];
 
     logCyan("➡ Creando entidades financieras…");
@@ -57,9 +31,9 @@ async function runSeed() {
     const entities = [];
 
     for (const name of entityNames) {
-        const ownerUserId = randomChoice(USERS); // repartir 9,11,13
+        const ownerUserId = USERS[Math.floor(Math.random() * USERS.length)];
 
-        const entity = await insertOne(
+        const entity = await executeQuery(
             `
             INSERT INTO financial_entities (created_at, name, user_id, deleted)
             VALUES (NOW(), $1, $2, FALSE)
@@ -68,42 +42,48 @@ async function runSeed() {
             [name, ownerUserId]
         );
 
-        entities.push(entity);
+        const row = entity[0];
+        entities.push(row);
 
-        await sql.unsafe(
+        await executeQuery(
             `
             INSERT INTO financial_entities_logs (created_at, financial_entity_id, content)
             VALUES (NOW(), $1, $2);
         `,
-            [entity.id, `Entidad "${entity.name}" creada automáticamente para el usuario ${ownerUserId}`]
+            [row.id, `Entidad "${row.name}" creada automáticamente para el usuario ${row.user_id}`]
         );
+
+        logBlue(`  - Entidad creada: ${row.name} (Usuario ID: ${row.user_id})`);
     }
 
     logGreen(`✔ ${entities.length} entidades creadas.`);
 
-    // ===============================================================
-    // 2) Crear GASTOS (purchases)
-    // ===============================================================
-
     logCyan("➡ Creando gastos…");
 
     const NUM_PURCHASES = 40;
-    const currencies = [0, 1, 2]; // INT enum
-    const purchaseTypes = ["DEBO", "ME_DEBEN"]; // enum nuevo
-
+    const currencies = [0, 1, 2];
+    const purchaseTypes = ["DEBO", "ME_DEBEN"];
     const purchases = [];
 
     for (let i = 0; i < NUM_PURCHASES; i++) {
-        const entity = randomChoice(entities);
+        const entity = entities[Math.floor(Math.random() * entities.length)];
 
         const amount = faker.number.int({ min: 3000, max: 250000 });
-        const quotas = faker.number.int({ min: 1, max: 12 });
-        const payed = faker.number.int({ min: 0, max: quotas });
+        const currency = currencies[Math.floor(Math.random() * currencies.length)];
+        const type = purchaseTypes[Math.floor(Math.random() * purchaseTypes.length)];
+        const fixedExpense = Math.random() < 0.3; // 30% chance
 
-        const currency = randomChoice(currencies);
-        const type = randomChoice(purchaseTypes); // nuevo enum
+        let quotas, payed;
 
-        const purchase = await insertOne(
+        if (fixedExpense) {
+            quotas = 0;
+            payed = faker.number.int({ min: 0, max: 1 }); // puede ser 0 o 1
+        } else {
+            quotas = faker.number.int({ min: 1, max: 12 });
+            payed = faker.number.int({ min: 0, max: quotas });
+        }
+
+        const purchase = await executeQuery(
             `
             INSERT INTO purchases (
                 created_at,
@@ -115,7 +95,7 @@ async function runSeed() {
                 number_of_quotas,
                 payed_quotas,
                 currency_type,
-                type,                    -- <<< nuevo
+                type,
                 name,
                 financial_entity_id,
                 fixed_expense,
@@ -126,39 +106,45 @@ async function runSeed() {
                 NULL,
                 NOW() + interval '1 month',
                 NULL,
-                $1,   -- amount
-                $2,   -- amount_per_quota
-                $3,   -- number_of_quotas
-                $4,   -- payed_quotas
-                $5,   -- currency_type (0,1,2)
-                $6,   -- type enum DEBO / ME_DEBEN
-                $7,   -- purchase name
-                $8,   -- entity id
-                FALSE,
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                $7,
+                $8,
+                $9,
                 FALSE
             )
-            RETURNING id, name, financial_entity_id, type;
+            RETURNING id, name, financial_entity_id, type, fixed_expense, number_of_quotas, payed_quotas;
         `,
             [
                 amount,
-                amount / quotas,
+                quotas === 0 ? amount : amount / quotas,
                 quotas,
                 payed,
                 currency,
                 type,
                 faker.commerce.productName(),
                 entity.id,
+                fixedExpense
             ]
         );
 
-        purchases.push(purchase);
+        const row = purchase[0];
+        purchases.push(row);
 
-        await sql.unsafe(
+        await executeQuery(
             `
             INSERT INTO purchases_logs (created_at, purchase_id, content)
             VALUES (NOW(), $1, $2);
         `,
-            [purchase.id, `Compra generada automáticamente: ${purchase.name} (${purchase.type})`]
+            [row.id, `Compra generada automáticamente: ${row.name} (${row.type})`]
+        );
+
+        logBlue(
+            `  - Gasto creado: ${row.name} | Tipo: ${row.type} | Fixed: ${row.fixed_expense} | Cuotas: ${row.number_of_quotas} | Pagadas: ${row.payed_quotas}`
         );
     }
 
@@ -167,8 +153,7 @@ async function runSeed() {
     process.exit(0);
 }
 
-// Ejecutar seed
-runSeed().catch((err) => {
-    console.error("❌ Error ejecutando el seed:", err);
+runSeed().catch(err => {
+    console.error("❌ Error ejecutando seed:", err);
     process.exit(1);
 });
