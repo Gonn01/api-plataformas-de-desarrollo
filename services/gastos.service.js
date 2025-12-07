@@ -26,7 +26,7 @@ export class GastosService {
     }
 
     async delete(id) {
-        const [row] = await this.gastosService.delete(id);
+        const row = await this.gastosRepository.delete(id);
 
         if (row.length === 0) {
             throw new Error("Gasto no encontrado");

@@ -6,7 +6,6 @@ export class GastosController {
         this.gastosService = gastosService;
     }
 
-
     crear = async (req, res) => {
         try {
             const {

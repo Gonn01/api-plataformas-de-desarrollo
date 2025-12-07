@@ -20,7 +20,7 @@ function randomChoice(arr) {
 }
 
 // Usuarios propietarios de entidades y gastos
-const USERS = [9, 11, 13];
+const USERS = [16, 17];
 
 // -----------------------------------------------------------
 // SEED PRINCIPAL

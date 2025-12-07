@@ -4,7 +4,7 @@ export class GastosRepository {
   async getById(id) {
     return await executeQuery(
       `SELECT * FROM purchases WHERE id = $1 AND deleted = false`,
-      [id], true
+      [id],
     );
   }
 
@@ -121,7 +121,6 @@ export class GastosRepository {
         image || null,          // $10 -> image
         dbType,                 // $11 -> type
       ],
-      true
     );
   }
 }
