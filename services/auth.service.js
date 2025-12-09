@@ -8,6 +8,7 @@ export class AuthService {
     }) {
         this.authRepository = authRepository;
     }
+
     async login(email, password) {
         const users = await this.authRepository.findUserByEmail(email);
 
@@ -63,7 +64,6 @@ export class AuthService {
 
         await this.authRepository.createUser(name, email, hash, firebaseId);
     }
-
 
     async updatePreferredCurrency(userId, preferredCurrency) {
         const rows = await this.authRepository.updatePreferredCurrency(

@@ -109,17 +109,17 @@ export class GastosRepository {
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NULL,$9,false,$10,now(),$11)
       RETURNING *`,
       [
-        financial_entity_id,    // $1
-        name,                   // $2
-        amount,                 // $3
-        amountPerQuota,         // $4
-        number_of_quotas,       // $5
-        payed_quotas,              // $6 -> payed_quotas
-        currency_type,           // $7 -> currency_type
-        first_quota_date,       // $8 -> first_quota_date
-        fixed_expense || false, // $9 -> fixed_expense
-        image || null,          // $10 -> image
-        dbType,                 // $11 -> type
+        financial_entity_id,
+        name,
+        amount,
+        amountPerQuota,
+        number_of_quotas,
+        payed_quotas,
+        currency_type,
+        first_quota_date,
+        fixed_expense || false,
+        image || null,
+        dbType,
       ],
     );
   }

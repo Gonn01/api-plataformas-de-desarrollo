@@ -26,18 +26,16 @@ export class GastosService {
     }
 
     async delete(id) {
-    // Llame al repository
-    const row = await this.gastosRepository.delete(id);
+        const row = await this.gastosRepository.delete(id);
 
-    if (!row || row.length === 0) {
-        throw new Error("Gasto no encontrado");
+        if (!row || row.length === 0) {
+            throw new Error("Gasto no encontrado");
+        }
+
+        await this.logsRepository.createGastoLog(id, "Gasto eliminado");
+
+        return row[0];
     }
-
-    // log de eliminación
-    await this.logsRepository.createGastoLog(id, "Gasto eliminado");
-
-    return row[0];
-}
 
     async crearGasto(
         financial_entity_id,

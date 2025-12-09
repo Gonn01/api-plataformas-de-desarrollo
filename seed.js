@@ -71,13 +71,13 @@ async function runSeed() {
         const amount = faker.number.int({ min: 3000, max: 250000 });
         const currency = currencies[Math.floor(Math.random() * currencies.length)];
         const type = purchaseTypes[Math.floor(Math.random() * purchaseTypes.length)];
-        const fixedExpense = Math.random() < 0.3; // 30% chance
+        const fixedExpense = Math.random() < 0.3;
 
         let quotas, payed;
 
         if (fixedExpense) {
             quotas = 0;
-            payed = faker.number.int({ min: 0, max: 1 }); // puede ser 0 o 1
+            payed = faker.number.int({ min: 0, max: 1 });
         } else {
             quotas = faker.number.int({ min: 1, max: 12 });
             payed = faker.number.int({ min: 0, max: quotas });

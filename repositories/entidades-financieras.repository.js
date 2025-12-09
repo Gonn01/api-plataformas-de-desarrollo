@@ -7,6 +7,7 @@ export class EntidadesFinancierasRepository {
             [userId],
         );
     }
+
     async getLogs(userId) {
         return await executeQuery(
             `SELECT fl.id, fl.action, fl.entity_id, fl.timestamp, fe.name AS entity_name
