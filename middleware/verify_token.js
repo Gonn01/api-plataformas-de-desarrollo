@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { logRed } from './logs_custom.js';
+import { logRed } from '../utils/logs_custom.js';
 import { JWT_SECRET } from '../config/env.js';
 
 export function verifyToken(req, res, next) {
