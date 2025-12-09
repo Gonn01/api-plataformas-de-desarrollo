@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 import { logGreen, logCyan, logBlue } from "./utils/logs_custom.js";
 import { executeQuery } from "./db.js";
 
-const USERS = [17];
+const USERS = [18];
 
 async function runSeed() {
     logGreen("🌱 Iniciando seed…");

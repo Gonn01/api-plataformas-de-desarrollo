@@ -20,7 +20,7 @@ export class AuthRepository {
             `INSERT INTO users (name, email, password, firebase_user_id, avatar, created_at)
              VALUES ($1, $2, $3, $4, $5, NOW())
              RETURNING id, name, email`,
-            [name, email, hash, firebaseId, avatar]
+            [name, email, hash, firebaseId, avatar ?? null],
         );
     }
 
