@@ -29,7 +29,7 @@ export class DashboardRepository {
               AND g.deleted = false
             WHERE e.user_id = $1 
               AND e.deleted = false
-            GROUP BY e.id;
+            GROUP BY e.id ORDER BY e.created_at DESC;
     `, [userId]);
   }
 }
