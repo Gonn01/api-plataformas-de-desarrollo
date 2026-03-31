@@ -9,9 +9,9 @@ async function runSeed() {
 
     await executeQuery(`
         TRUNCATE TABLE 
-            purchases_logs,
+            purchases_movements,
             purchases,
-            financial_entities_logs,
+            financial_entities_movements,
             financial_entities
         RESTART IDENTITY CASCADE;
     `);
@@ -47,7 +47,7 @@ async function runSeed() {
 
         await executeQuery(
             `
-            INSERT INTO financial_entities_logs (created_at, financial_entity_id, content)
+            INSERT INTO financial_entities_movements (created_at, financial_entity_id, movement_type)
             VALUES (NOW(), $1, $2);
         `,
             [row.id, `Entidad "${row.name}" creada automáticamente para el usuario ${row.user_id}`]
@@ -137,7 +137,7 @@ async function runSeed() {
 
         await executeQuery(
             `
-            INSERT INTO purchases_logs (created_at, purchase_id, content)
+            INSERT INTO purchases_movements (created_at, purchase_id, movement_type)
             VALUES (NOW(), $1, $2);
         `,
             [row.id, `Compra generada automáticamente: ${row.name} (${row.type})`]

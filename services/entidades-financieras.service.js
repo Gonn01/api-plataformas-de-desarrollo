@@ -1,8 +1,8 @@
 export class EntidadesFinancierasService {
-  constructor({ entidadesFinancierasRepository, gastosRepository, logsRepository }) {
+  constructor({ entidadesFinancierasRepository, gastosRepository, movementsRepository }) {
     this.entidadesFinancierasRepository = entidadesFinancierasRepository;
     this.gastosRepository = gastosRepository;
-    this.logsRepository = logsRepository;
+    this.movementsRepository = movementsRepository;
   }
 
   async listar(userId) {
@@ -25,7 +25,7 @@ export class EntidadesFinancierasService {
     const gastosActivos = gastos.filter(g => Number(g.payed_quotas) < Number(g.number_of_quotas) || g.fixed_expense);
     const gastosFinalizados = gastos.filter(g => Number(g.payed_quotas) >= Number(g.number_of_quotas) && !g.fixed_expense);
 
-    const logs = await this.logsRepository.getLogsByEntidad(id);
+    const movements = await this.movementsRepository.getMovementsByEntidad(id);
 
     return {
       id: entity.id,
@@ -33,14 +33,14 @@ export class EntidadesFinancierasService {
       created_at: entity.created_at,
       gastos_activos: gastosActivos,
       gastos_inactivos: gastosFinalizados,
-      logs,
+      movements,
     };
   }
 
   async crear(name, userId) {
     const [row] = await this.entidadesFinancierasRepository.create(name, userId);
 
-    await this.logsRepository.createEntidadLog(
+    await this.movementsRepository.createEntidadLog(
       row.id,
       `Entidad financiera "${name}" creada.`
     );
@@ -54,7 +54,7 @@ export class EntidadesFinancierasService {
 
     const [row] = await this.entidadesFinancierasRepository.update(id, name, userId);
 
-    await this.logsRepository.createEntidadLog(id, "Entidad financiera actualizada de '" + currentRows[0].name + "' a: '" + name + "'");
+    await this.movementsRepository.createEntidadLog(id, "Entidad financiera actualizada de '" + currentRows[0].name + "' a: '" + name + "'");
 
     return row;
   }
@@ -66,12 +66,12 @@ export class EntidadesFinancierasService {
       throw new Error("Entidad no encontrada");
     }
 
-    await this.logsRepository.createEntidadLog(id, "Entidad financiera eliminada");
+    await this.movementsRepository.createEntidadLog(id, "Entidad financiera eliminada");
 
     return deletedRows[0];
   }
 
-  async obtenerLogs(id) {
-    return await this.logsRepository.getLogsByEntidad(id);
+  async obtenerMovements(id) {
+    return await this.movementsRepository.getMovementsByEntidad(id);
   }
 }

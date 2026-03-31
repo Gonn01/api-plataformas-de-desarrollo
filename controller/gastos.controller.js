@@ -37,8 +37,8 @@ export class GastosController {
                 type,
                 payed_quotas
             );
-            const logs = await this.gastosService.obtenerLogsPorGasto(inserted[0].id);
-            inserted[0].logs = logs;
+            const movements = await this.gastosService.obtenerMovimientosPorGasto(inserted[0].id);
+            inserted[0].movements = movements;
             res.status(201).json({
                 message: "Gasto creado con éxito",
                 data: inserted[0],

@@ -1,7 +1,7 @@
 export class GastosService {
-    constructor({ gastosRepository, logsRepository }) {
+    constructor({ gastosRepository, movementsRepository }) {
         this.gastosRepository = gastosRepository;
-        this.logsRepository = logsRepository;
+        this.movementsRepository = movementsRepository;
     }
 
     async getById(id) {
@@ -10,8 +10,8 @@ export class GastosService {
         if (row.length === 0) {
             throw new Error("Gasto no encontrado");
         }
-        const logs = await this.logsRepository.getLogsByGasto(id);
-        row[0].logs = logs;
+        const movements = await this.movementsRepository.getMovementsByGasto(id);
+        row[0].movements = movements;
         return row[0];
     }
 
@@ -21,7 +21,7 @@ export class GastosService {
         if (row.length === 0) {
             throw new Error("No se pudo actualizar (Gasto no existe)");
         }
-        await this.logsRepository.createGastoLog(id, "Gasto actualizado")
+        await this.movementsRepository.createGastoLog(id, "Gasto actualizado")
         return row;
     }
 
@@ -32,7 +32,7 @@ export class GastosService {
             throw new Error("Gasto no encontrado");
         }
 
-        await this.logsRepository.createGastoLog(id, "Gasto eliminado");
+        await this.movementsRepository.createGastoLog(id, "Gasto eliminado");
 
         return row[0];
     }
@@ -75,7 +75,7 @@ export class GastosService {
 
         const updated = await this.gastosRepository.pagarCuota(purchase_id);
 
-        await this.logsRepository.createGastoLog(purchase_id, "Cuota pagada.");
+        await this.movementsRepository.createGastoLog(purchase_id, "Cuota pagada.");
 
         return updated;
     }
@@ -87,7 +87,7 @@ export class GastosService {
         }
 
         const logPromises = purchaseIds.map(element => {
-            return this.logsRepository.createGastoLog(
+            return this.movementsRepository.createGastoLog(
                 element,
                 `Cuota pagada por lote`
             );
@@ -98,7 +98,7 @@ export class GastosService {
         return await this.gastosRepository.pagarCuotasLote(purchaseIds);
     }
 
-    async obtenerLogsPorGasto(gastoId) {
-        return await this.logsRepository.getLogsByGasto(gastoId);
+    async obtenerMovementsPorGasto(gastoId) {
+        return await this.movementsRepository.getMovementsByGasto(gastoId);
     }
 }

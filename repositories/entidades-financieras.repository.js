@@ -8,10 +8,10 @@ export class EntidadesFinancierasRepository {
         );
     }
 
-    async getLogs(userId) {
+    async getMovements(userId) {
         return await executeQuery(
             `SELECT fl.id, fl.action, fl.entity_id, fl.timestamp, fe.name AS entity_name
-             FROM financial_logs fl
+             FROM financial_movements fl
              JOIN financial_entities fe ON fe.id = fl.entity_id
              WHERE fe.user_id = $1
              ORDER BY fl.timestamp DESC`,

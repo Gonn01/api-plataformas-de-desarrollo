@@ -66,8 +66,8 @@ export class EntidadesFinancierasController {
             const { userId } = req.session;
 
             const response = await this.entidadesFinancierasService.actualizar(id, name, userId);
-            const logs = await this.entidadesFinancierasService.obtenerLogs(id, userId);
-            response.logs = logs;
+            const movements = await this.entidadesFinancierasService.obtenerMovimientos(id, userId);
+            response.movements = movements;
             res.json({
                 message: "Entidad financiera actualizada con éxito",
                 data: response
