@@ -13,8 +13,8 @@ export class DashboardRepository {
                   'name', g.name,
                   'amount', g.amount,
                   'number_of_quotas', g.number_of_quotas,
-                  'amount_per_quota', g.amount_per_quota,
-                  'payed_quotas', g.payed_quotas,
+                  'amount_per_quota', CASE WHEN g.number_of_quotas > 0 THEN g.amount::numeric / g.number_of_quotas ELSE g.amount END,
+                  'payed_quotas', (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = g.id AND movement_type = 'PAYMENT'),
                   'currency_type', g.currency_type,
                   'type', g.type,
                   'fixed_expense', g.fixed_expense
@@ -23,13 +23,15 @@ export class DashboardRepository {
               '[]'::json
             ) AS gastos
             FROM financial_entities e
-            LEFT JOIN purchases g 
-              ON g.financial_entity_id = e.id 
-              AND (g.fixed_expense = true OR g.payed_quotas < g.number_of_quotas)
+            LEFT JOIN purchases g
+              ON g.financial_entity_id = e.id
+              AND (g.fixed_expense = true OR (
+                  SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = g.id AND movement_type = 'PAYMENT'
+              ) < g.number_of_quotas)
               AND g.deleted = false
-            WHERE e.user_id = $1 
+            WHERE e.user_id = $1
               AND e.deleted = false
             GROUP BY e.id ORDER BY e.created_at DESC;
-    `, [userId]);
+    `, [userId], true);
   }
 }

@@ -1,6 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { logGreen, logCyan, logBlue } from "./utils/logs_custom.js";
 import { executeQuery } from "./db.js";
+import { MovementType, Currency, ExpenseType } from "./utils/enums.js";
 
 const USERS = [18];
 
@@ -8,7 +9,7 @@ async function runSeed() {
     logGreen("🌱 Iniciando seed…");
 
     await executeQuery(`
-        TRUNCATE TABLE 
+        TRUNCATE TABLE
             purchases_movements,
             purchases,
             financial_entities_movements,
@@ -46,11 +47,9 @@ async function runSeed() {
         entities.push(row);
 
         await executeQuery(
-            `
-            INSERT INTO financial_entities_movements (created_at, financial_entity_id, movement_type)
-            VALUES (NOW(), $1, $2);
-        `,
-            [row.id, `Entidad "${row.name}" creada automáticamente para el usuario ${row.user_id}`]
+            `INSERT INTO financial_entities_movements (created_at, financial_entity_id, movement_type)
+             VALUES (NOW(), $1, $2);`,
+            [row.id, MovementType.CREATION]
         );
 
         logBlue(`  - Entidad creada: ${row.name} (Usuario ID: ${row.user_id})`);
@@ -61,8 +60,8 @@ async function runSeed() {
     logCyan("➡ Creando gastos…");
 
     const NUM_PURCHASES = 40;
-    const currencies = [0, 1, 2];
-    const purchaseTypes = ["DEBO", "ME_DEBEN"];
+    const currencies = Object.values(Currency);
+    const purchaseTypes = Object.values(ExpenseType);
     const purchases = [];
 
     for (let i = 0; i < NUM_PURCHASES; i++) {
@@ -91,9 +90,7 @@ async function runSeed() {
                 first_quota_date,
                 image,
                 amount,
-                amount_per_quota,
                 number_of_quotas,
-                payed_quotas,
                 currency_type,
                 type,
                 name,
@@ -113,17 +110,13 @@ async function runSeed() {
                 $5,
                 $6,
                 $7,
-                $8,
-                $9,
                 FALSE
             )
-            RETURNING id, name, financial_entity_id, type, fixed_expense, number_of_quotas, payed_quotas;
+            RETURNING id, name, financial_entity_id, type, fixed_expense, number_of_quotas;
         `,
             [
                 amount,
-                quotas === 0 ? amount : amount / quotas,
                 quotas,
-                payed,
                 currency,
                 type,
                 faker.commerce.productName(),
@@ -136,15 +129,22 @@ async function runSeed() {
         purchases.push(row);
 
         await executeQuery(
-            `
-            INSERT INTO purchases_movements (created_at, purchase_id, movement_type)
-            VALUES (NOW(), $1, $2);
-        `,
-            [row.id, `Compra generada automáticamente: ${row.name} (${row.type})`]
+            `INSERT INTO purchases_movements (created_at, purchase_id, movement_type, amount, payment_date)
+             VALUES (NOW(), $1, $2, NULL, NULL);`,
+            [row.id, MovementType.CREATION]
         );
 
+        const amountPerQuota = quotas > 0 ? amount / quotas : amount;
+        for (let p = 0; p < payed; p++) {
+            await executeQuery(
+                `INSERT INTO purchases_movements (created_at, purchase_id, movement_type, amount, payment_date)
+                 VALUES (NOW() - interval '1 month' * $1, $2, $4, $3, NOW() - interval '1 month' * $1);`,
+                [payed - p, row.id, amountPerQuota, MovementType.PAYMENT]
+            );
+        }
+
         logBlue(
-            `  - Gasto creado: ${row.name} | Tipo: ${row.type} | Fixed: ${row.fixed_expense} | Cuotas: ${row.number_of_quotas} | Pagadas: ${row.payed_quotas}`
+            `  - Gasto creado: ${row.name} | Tipo: ${row.type} | Fixed: ${row.fixed_expense} | Cuotas: ${row.number_of_quotas} | Pagadas: ${payed}`
         );
     }
 

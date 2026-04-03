@@ -7,35 +7,35 @@ export class MovementsRepository {
              FROM financial_entities_movements
              WHERE financial_entity_id = $1
              ORDER BY created_at DESC`,
-            [entidadId]
+            [entidadId], true
         );
     }
 
     async getMovementsByGasto(gastoId) {
         return await executeQuery(
-            `SELECT id, created_at, movement_type
+            `SELECT id, created_at, movement_type, amount, payment_date
              FROM purchases_movements
              WHERE purchase_id = $1
              ORDER BY created_at DESC`,
-            [gastoId],
+            [gastoId], true
         );
     }
 
-    async createEntidadLog(entidadId, movement_type) {
+    async createEntidadLog(entidadId, movementType) {
         return await executeQuery(
-            `INSERT INTO financial_entities_logs (created_at, financial_entity_id, movement_type)
+            `INSERT INTO financial_entities_movements (created_at, financial_entity_id, movement_type)
              VALUES (NOW(), $1, $2)
              RETURNING *`,
-            [entidadId, movement_type]
+            [entidadId, movementType], true
         );
     }
 
-    async createGastoLog(gastoId, movement_type) {
+    async createGastoLog(gastoId, movementType, amount = null, paymentDate = null) {
         return await executeQuery(
-            `INSERT INTO purchases_logs (created_at, purchase_id, movement_type)
-             VALUES (NOW(), $1, $2)
+            `INSERT INTO purchases_movements (created_at, purchase_id, movement_type, amount, payment_date)
+             VALUES (NOW(), $1, $2, $3, $4)
              RETURNING *`,
-            [gastoId, movement_type]
+            [gastoId, movementType, amount, paymentDate], true
         );
     }
 }

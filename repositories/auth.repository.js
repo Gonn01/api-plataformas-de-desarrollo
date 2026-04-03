@@ -4,14 +4,14 @@ export class AuthRepository {
     async findUserByEmail(email) {
         return await executeQuery(
             "SELECT * FROM users WHERE email = $1 LIMIT 1",
-            [email]
+            [email], true
         );
     }
 
     async findUserByFirebaseId(firebaseId) {
         return await executeQuery(
             "SELECT * FROM users WHERE firebase_user_id = $1 LIMIT 1",
-            [firebaseId]
+            [firebaseId], true
         );
     }
 
@@ -20,7 +20,7 @@ export class AuthRepository {
             `INSERT INTO users (name, email, password, firebase_user_id, avatar, created_at)
              VALUES ($1, $2, $3, $4, $5, NOW())
              RETURNING id, name, email`,
-            [name, email, hash, firebaseId, avatar ?? null],
+            [name, email, hash, firebaseId, avatar ?? null], true
         );
     }
 
@@ -30,7 +30,7 @@ export class AuthRepository {
              SET preferred_currency = $2
              WHERE id = $1
              RETURNING id, name, email, avatar, firebase_user_id, preferred_currency`,
-            [userId, preferredCurrency]
+            [userId, preferredCurrency], true
         );
     }
 

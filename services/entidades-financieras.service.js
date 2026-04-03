@@ -1,3 +1,5 @@
+import { MovementType } from "../utils/enums.js";
+
 export class EntidadesFinancierasService {
   constructor({ entidadesFinancierasRepository, gastosRepository, movementsRepository }) {
     this.entidadesFinancierasRepository = entidadesFinancierasRepository;
@@ -40,10 +42,7 @@ export class EntidadesFinancierasService {
   async crear(name, userId) {
     const [row] = await this.entidadesFinancierasRepository.create(name, userId);
 
-    await this.movementsRepository.createEntidadLog(
-      row.id,
-      `Entidad financiera "${name}" creada.`
-    );
+    await this.logsRepository.createEntidadLog(row.id, MovementType.CREATION);
 
     return row;
   }
@@ -54,7 +53,6 @@ export class EntidadesFinancierasService {
 
     const [row] = await this.entidadesFinancierasRepository.update(id, name, userId);
 
-    await this.movementsRepository.createEntidadLog(id, "Entidad financiera actualizada de '" + currentRows[0].name + "' a: '" + name + "'");
 
     return row;
   }
@@ -66,7 +64,7 @@ export class EntidadesFinancierasService {
       throw new Error("Entidad no encontrada");
     }
 
-    await this.movementsRepository.createEntidadLog(id, "Entidad financiera eliminada");
+    await this.logsRepository.createEntidadLog(id, MovementType.DELETE);
 
     return deletedRows[0];
   }

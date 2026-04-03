@@ -1,3 +1,5 @@
+import { MovementType } from "../utils/enums.js";
+
 export class GastosService {
     constructor({ gastosRepository, movementsRepository }) {
         this.gastosRepository = gastosRepository;
@@ -15,13 +17,12 @@ export class GastosService {
         return row[0];
     }
 
-    async update(id, name, amount, image, fixed_expense) {
-        const [row] = await this.gastosRepository.update(id, name, amount, image, fixed_expense);
+    async update(id, name, amount, image, fixed_expense, type) {
+        const [row] = await this.gastosRepository.update(id, name, amount, image, fixed_expense, type);
 
         if (row.length === 0) {
             throw new Error("No se pudo actualizar (Gasto no existe)");
         }
-        await this.movementsRepository.createGastoLog(id, "Gasto actualizado")
         return row;
     }
 
@@ -32,7 +33,7 @@ export class GastosService {
             throw new Error("Gasto no encontrado");
         }
 
-        await this.movementsRepository.createGastoLog(id, "Gasto eliminado");
+        await this.logsRepository.createGastoLog(id, MovementType.DELETE);
 
         return row[0];
     }
@@ -46,24 +47,23 @@ export class GastosService {
         first_quota_date,
         fixed_expense,
         image,
-        type,
-        payed_quotas = 0
+        type
     ) {
-        const amountPerQuota = number_of_quotas > 0 ? amount / number_of_quotas : amount;
-
-        return this.gastosRepository.create({
+        const rows = await this.gastosRepository.create({
             financial_entity_id,
             name,
             amount,
-            amountPerQuota,
             number_of_quotas,
-            payed_quotas,
             currency_type,
             first_quota_date,
             fixed_expense,
             image,
             type
         });
+
+        await this.logsRepository.createGastoLog(rows[0].id, MovementType.CREATION);
+
+        return rows;
     }
 
     async pagarCuota(purchase_id) {
@@ -73,9 +73,9 @@ export class GastosService {
             throw new Error("Gasto no encontrado");
         }
 
-        const updated = await this.gastosRepository.pagarCuota(purchase_id);
+        await this.logsRepository.createGastoLog(purchase_id, MovementType.PAYMENT, rows[0].amount_per_quota, new Date());
 
-        await this.movementsRepository.createGastoLog(purchase_id, "Cuota pagada.");
+        const updated = await this.gastosRepository.pagarCuota(purchase_id);
 
         return updated;
     }
@@ -86,13 +86,10 @@ export class GastosService {
             throw new Error("La lista de IDs de compra es inválida.");
         }
 
-        const logPromises = purchaseIds.map(element => {
-            return this.movementsRepository.createGastoLog(
-                element,
-                `Cuota pagada por lote`
-            );
-        });
-
+        const paymentDate = new Date();
+        const logPromises = purchaseIds.map(id =>
+            this.logsRepository.createGastoLog(id, MovementType.PAYMENT, null, paymentDate)
+        );
         await Promise.all(logPromises);
 
         return await this.gastosRepository.pagarCuotasLote(purchaseIds);
