@@ -14,9 +14,8 @@ export class GastosController {
                 amount,
                 number_of_quotas,
                 currency_type,
-                first_quota_date,
                 fixed_expense,
-                image,
+                image_url,
                 type,
                 payed_quotas,
             } = req.body;
@@ -31,9 +30,8 @@ export class GastosController {
                 amount,
                 number_of_quotas,
                 currency_type,
-                first_quota_date,
                 fixed_expense,
-                image,
+                image_url,
                 type,
                 payed_quotas
             );
@@ -68,9 +66,9 @@ export class GastosController {
     update = async (req, res) => {
         try {
             const { id } = req.params;
-            const { name, amount, image, fixed_expense, type } = req.body;
+            const { name, amount, image_url, fixed_expense, type } = req.body;
 
-            const response = await this.gastosService.update(id, name, amount, image, fixed_expense, type);
+            const response = await this.gastosService.update(id, name, amount, image_url, fixed_expense, type);
 
             res.json({
                 message: "Gasto actualizado",

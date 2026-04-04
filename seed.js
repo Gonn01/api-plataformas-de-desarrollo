@@ -86,9 +86,7 @@ async function runSeed() {
             `
             INSERT INTO purchases (
                 created_at,
-                finalization_date,
-                first_quota_date,
-                image,
+                image_url,
                 amount,
                 number_of_quotas,
                 currency_type,
@@ -100,8 +98,6 @@ async function runSeed() {
             )
             VALUES (
                 NOW(),
-                NULL,
-                NOW() + interval '1 month',
                 NULL,
                 $1,
                 $2,

@@ -17,8 +17,8 @@ export class GastosService {
         return row[0];
     }
 
-    async update(id, name, amount, image, fixed_expense, type) {
-        const [row] = await this.gastosRepository.update(id, name, amount, image, fixed_expense, type);
+    async update(id, name, amount, image_url, fixed_expense, type) {
+        const [row] = await this.gastosRepository.update(id, name, amount, image_url, fixed_expense, type);
 
         if (row.length === 0) {
             throw new Error("No se pudo actualizar (Gasto no existe)");
@@ -44,9 +44,8 @@ export class GastosService {
         amount,
         number_of_quotas,
         currency_type,
-        first_quota_date,
         fixed_expense,
-        image,
+        image_url,
         type
     ) {
         const rows = await this.gastosRepository.create({
@@ -55,9 +54,8 @@ export class GastosService {
             amount,
             number_of_quotas,
             currency_type,
-            first_quota_date,
             fixed_expense,
-            image,
+            image_url,
             type
         });
 

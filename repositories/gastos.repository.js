@@ -5,7 +5,11 @@ export class GastosRepository {
     return await executeQuery(
       `SELECT p.*,
           (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT')::int AS payed_quotas,
-          CASE WHEN p.number_of_quotas > 0 THEN p.amount::numeric / p.number_of_quotas ELSE p.amount END AS amount_per_quota
+          CASE WHEN p.number_of_quotas > 0 THEN p.amount::numeric / p.number_of_quotas ELSE p.amount END AS amount_per_quota,
+          (SELECT payment_date FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT' ORDER BY payment_date ASC NULLS LAST LIMIT 1) AS first_quota_date,
+          CASE WHEN p.fixed_expense = false AND (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT') >= p.number_of_quotas
+               THEN (SELECT MAX(payment_date) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT')
+               ELSE NULL END AS finalization_date
        FROM purchases p
        WHERE p.id = $1 AND p.deleted = false`,
       [id], true
@@ -16,7 +20,11 @@ export class GastosRepository {
     return await executeQuery(
       `SELECT p.*,
           (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT')::int AS payed_quotas,
-          CASE WHEN p.number_of_quotas > 0 THEN p.amount::numeric / p.number_of_quotas ELSE p.amount END AS amount_per_quota
+          CASE WHEN p.number_of_quotas > 0 THEN p.amount::numeric / p.number_of_quotas ELSE p.amount END AS amount_per_quota,
+          (SELECT payment_date FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT' ORDER BY payment_date ASC NULLS LAST LIMIT 1) AS first_quota_date,
+          CASE WHEN p.fixed_expense = false AND (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT') >= p.number_of_quotas
+               THEN (SELECT MAX(payment_date) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT')
+               ELSE NULL END AS finalization_date
        FROM purchases p
        WHERE p.financial_entity_id = $1 AND p.deleted = false
        ORDER BY p.created_at DESC`,
@@ -26,23 +34,15 @@ export class GastosRepository {
 
   async pagarCuota(id) {
     return await executeQuery(
-      `UPDATE purchases
-       SET finalization_date = CASE
-           WHEN fixed_expense = false AND (
-               SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = purchases.id AND movement_type = 'PAYMENT'
-           ) >= number_of_quotas THEN now()
-           ELSE finalization_date
-       END,
-       first_quota_date = CASE
-           WHEN (
-               SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = purchases.id AND movement_type = 'PAYMENT'
-           ) = 1 THEN now()
-           ELSE first_quota_date
-       END
-       WHERE id = $1
-       RETURNING *,
-           (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = $1 AND movement_type = 'PAYMENT')::int AS payed_quotas,
-           CASE WHEN number_of_quotas > 0 THEN amount::numeric / number_of_quotas ELSE amount END AS amount_per_quota`,
+      `SELECT p.*,
+          (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT')::int AS payed_quotas,
+          CASE WHEN p.number_of_quotas > 0 THEN p.amount::numeric / p.number_of_quotas ELSE p.amount END AS amount_per_quota,
+          (SELECT payment_date FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT' ORDER BY payment_date ASC NULLS LAST LIMIT 1) AS first_quota_date,
+          CASE WHEN p.fixed_expense = false AND (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT') >= p.number_of_quotas
+               THEN (SELECT MAX(payment_date) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT')
+               ELSE NULL END AS finalization_date
+       FROM purchases p
+       WHERE p.id = $1 AND p.deleted = false`,
       [id], true
     );
   }
@@ -51,23 +51,15 @@ export class GastosRepository {
     const updated = [];
     for (const id of ids) {
       const result = await executeQuery(
-        `UPDATE purchases
-         SET finalization_date = CASE
-             WHEN fixed_expense = false AND (
-                 SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = purchases.id AND movement_type = 'PAYMENT'
-             ) >= number_of_quotas THEN now()
-             ELSE finalization_date
-         END,
-         first_quota_date = CASE
-             WHEN (
-                 SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = purchases.id AND movement_type = 'PAYMENT'
-             ) = 1 THEN now()
-             ELSE first_quota_date
-         END
-         WHERE id = $1
-         RETURNING id, name, number_of_quotas, financial_entity_id, currency_type, amount, finalization_date,
-             (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = $1 AND movement_type = 'PAYMENT')::int AS payed_quotas,
-             CASE WHEN number_of_quotas > 0 THEN amount::numeric / number_of_quotas ELSE amount END AS amount_per_quota`,
+        `SELECT p.*,
+            (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT')::int AS payed_quotas,
+            CASE WHEN p.number_of_quotas > 0 THEN p.amount::numeric / p.number_of_quotas ELSE p.amount END AS amount_per_quota,
+            (SELECT payment_date FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT' ORDER BY payment_date ASC NULLS LAST LIMIT 1) AS first_quota_date,
+            CASE WHEN p.fixed_expense = false AND (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT') >= p.number_of_quotas
+                 THEN (SELECT MAX(payment_date) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT')
+                 ELSE NULL END AS finalization_date
+         FROM purchases p
+         WHERE p.id = $1 AND p.deleted = false`,
         [id], true
       );
 
@@ -78,16 +70,20 @@ export class GastosRepository {
     return updated;
   }
 
-  async update(id, name, amount, image, fixed_expense, type) {
+  async update(id, name, amount, image_url, fixed_expense, type) {
     const dbType = type ? String(type).toUpperCase() : null;
     return await executeQuery(
       `UPDATE purchases
-       SET name = $1, amount = $2, image = $3, fixed_expense = $4, type = $5
+       SET name = $1, amount = $2, image_url = $3, fixed_expense = $4, type = $5
        WHERE id = $6
        RETURNING *,
            (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = $6 AND movement_type = 'PAYMENT')::int AS payed_quotas,
-           CASE WHEN number_of_quotas > 0 THEN amount::numeric / number_of_quotas ELSE amount END AS amount_per_quota`,
-      [name, amount, image || null, fixed_expense || false, dbType, id], true
+           CASE WHEN number_of_quotas > 0 THEN amount::numeric / number_of_quotas ELSE amount END AS amount_per_quota,
+           (SELECT payment_date FROM purchases_movements WHERE purchase_id = $6 AND movement_type = 'PAYMENT' ORDER BY payment_date ASC NULLS LAST LIMIT 1) AS first_quota_date,
+           CASE WHEN fixed_expense = false AND (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = $6 AND movement_type = 'PAYMENT') >= number_of_quotas
+                THEN (SELECT MAX(payment_date) FROM purchases_movements WHERE purchase_id = $6 AND movement_type = 'PAYMENT')
+                ELSE NULL END AS finalization_date`,
+      [name, amount, image_url || null, fixed_expense || false, dbType, id], true
     );
   }
 
@@ -104,9 +100,8 @@ export class GastosRepository {
     amount,
     number_of_quotas,
     currency_type,
-    first_quota_date,
     fixed_expense,
-    image,
+    image_url,
     type
   }) {
     const dbType = type ? String(type).toUpperCase() : null;
@@ -114,22 +109,22 @@ export class GastosRepository {
     return await executeQuery(
       `INSERT INTO purchases (
         financial_entity_id, name, amount, number_of_quotas,
-        currency_type, first_quota_date, finalization_date,
-        fixed_expense, deleted, image, created_at, type
+        currency_type, fixed_expense, deleted, image_url, created_at, type
       )
-      VALUES ($1,$2,$3,$4,$5,$6,NULL,$7,false,$8,now(),$9)
+      VALUES ($1,$2,$3,$4,$5,$6,false,$7,now(),$8)
       RETURNING *,
           0::int AS payed_quotas,
-          CASE WHEN $4 > 0 THEN $3::numeric / $4 ELSE $3 END AS amount_per_quota`,
+          CASE WHEN $4 > 0 THEN $3::numeric / $4 ELSE $3 END AS amount_per_quota,
+          NULL::timestamptz AS first_quota_date,
+          NULL::timestamptz AS finalization_date`,
       [
         financial_entity_id,
         name,
         amount,
         number_of_quotas,
         currency_type,
-        first_quota_date,
         fixed_expense || false,
-        image || null,
+        image_url || null,
         dbType,
       ], true
     );

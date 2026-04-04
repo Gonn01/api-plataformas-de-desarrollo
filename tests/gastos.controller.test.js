@@ -38,9 +38,8 @@ describe("GastosController", () => {
             amount: 15000,
             number_of_quotas: 12,
             currency_type: 0,
-            first_quota_date: "2024-01-01",
             fixed_expense: false,
-            image: null,
+            image_url: null,
             type: 0,
             payed_quotas: 0,
         };
@@ -56,7 +55,7 @@ describe("GastosController", () => {
             await controller.crear(req, res);
 
             expect(service.crearGasto).toHaveBeenCalledWith(
-                1, "Netflix", 15000, 12, 0, "2024-01-01", false, null, 0, 0
+                1, "Netflix", 15000, 12, 0, false, null, 0, 0
             );
             expect(service.obtenerMovimientosPorGasto).toHaveBeenCalledWith(10);
             expect(res.status).toHaveBeenCalledWith(201);
@@ -140,7 +139,7 @@ describe("GastosController", () => {
 
     describe("update", () => {
         it("responde con el gasto actualizado", async () => {
-            const req = makeReq({ params: { id: "10" }, body: { name: "Netflix Premium", amount: 20000, image: null, fixed_expense: false, type: 0 } });
+            const req = makeReq({ params: { id: "10" }, body: { name: "Netflix Premium", amount: 20000, image_url: null, fixed_expense: false, type: 0 } });
             const res = makeRes();
             const mockUpdated = { id: 10, name: "Netflix Premium", amount: 20000 };
             service.update.mockResolvedValue(mockUpdated);
