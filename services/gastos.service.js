@@ -1,10 +1,11 @@
 import { MovementType } from "../utils/enums.js";
 
 export class GastosService {
-    constructor({ gastosRepository, movementsRepository, entidadesFinancierasRepository }) {
+    constructor({ gastosRepository, movementsRepository, entidadesFinancierasRepository, categoriasRepository }) {
         this.gastosRepository = gastosRepository;
         this.movementsRepository = movementsRepository;
         this.entidadesFinancierasRepository = entidadesFinancierasRepository;
+        this.categoriasRepository = categoriasRepository;
     }
 
     async getById(id) {
@@ -13,8 +14,14 @@ export class GastosService {
         if (row.length === 0) {
             throw new Error("Gasto no encontrado");
         }
-        const movements = await this.movementsRepository.getMovementsByGasto(id);
+
+        const [movements, categories] = await Promise.all([
+            this.movementsRepository.getMovementsByGasto(id),
+            this.categoriasRepository.getCategoriasByGasto(id),
+        ]);
+
         row[0].movements = movements;
+        row[0].categories = categories;
         return row[0];
     }
 
@@ -47,7 +54,8 @@ export class GastosService {
         image_url,
         type,
         userId,
-        payed_quotas = 0
+        payed_quotas = 0,
+        category_ids = []
     ) {
         const entidad = await this.entidadesFinancierasRepository.getById(financial_entity_id, userId);
         if (!entidad.length) throw new Error("Entidad financiera no encontrada o eliminada");
@@ -78,7 +86,18 @@ export class GastosService {
 
         await Promise.all(logPromises);
 
+        if (category_ids?.length) {
+            await this.categoriasRepository.setCategoriasForGasto(gastoId, category_ids);
+        }
+
+        rows[0].categories = await this.categoriasRepository.getCategoriasByGasto(gastoId);
+
         return rows;
+    }
+
+    async actualizarCategorias(gastoId, categoryIds) {
+        await this.categoriasRepository.setCategoriasForGasto(gastoId, categoryIds);
+        return await this.categoriasRepository.getCategoriasByGasto(gastoId);
     }
 
     async pagarCuota(purchase_id) {

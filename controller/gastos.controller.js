@@ -18,6 +18,7 @@ export class GastosController {
                 image_url,
                 type,
                 payed_quotas,
+                category_ids,
             } = req.body;
             const { userId } = req.session;
 
@@ -35,10 +36,9 @@ export class GastosController {
                 image_url,
                 type,
                 userId,
-                payed_quotas
+                payed_quotas,
+                category_ids
             );
-            const movements = await this.gastosService.obtenerMovementsPorGasto(inserted[0].id);
-            inserted[0].movements = movements;
             res.status(201).json({
                 message: "Gasto creado con éxito",
                 data: inserted[0],
@@ -111,6 +111,23 @@ export class GastosController {
                 message: "Cuota pagada con éxito",
                 data: updated[0]
             });
+        } catch (err) {
+            logRed(err);
+            res.status(500).json({ error: "Error en el servidor" });
+        }
+    }
+
+    actualizarCategorias = async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { category_ids } = req.body;
+
+            if (!Array.isArray(category_ids)) {
+                return res.status(400).json({ error: "Debe enviar 'category_ids' como array" });
+            }
+
+            const data = await this.gastosService.actualizarCategorias(id, category_ids);
+            res.json({ message: "Categorías actualizadas con éxito", data });
         } catch (err) {
             logRed(err);
             res.status(500).json({ error: "Error en el servidor" });
