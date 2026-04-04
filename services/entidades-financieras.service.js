@@ -42,7 +42,7 @@ export class EntidadesFinancierasService {
   async crear(name, userId) {
     const [row] = await this.entidadesFinancierasRepository.create(name, userId);
 
-    await this.logsRepository.createEntidadLog(row.id, MovementType.CREATION);
+    await this.movementsRepository.createEntidadLog(row.id, MovementType.CREATION);
 
     return row;
   }
@@ -63,8 +63,6 @@ export class EntidadesFinancierasService {
     if (deletedRows.length === 0) {
       throw new Error("Entidad no encontrada");
     }
-
-    await this.logsRepository.createEntidadLog(id, MovementType.DELETE);
 
     return deletedRows[0];
   }

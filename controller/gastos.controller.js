@@ -19,6 +19,7 @@ export class GastosController {
                 type,
                 payed_quotas,
             } = req.body;
+            const { userId } = req.session;
 
             if (!financial_entity_id || !name || !amount) {
                 return res.status(400).json({ error: "Faltan campos obligatorios" });
@@ -33,9 +34,10 @@ export class GastosController {
                 fixed_expense,
                 image_url,
                 type,
+                userId,
                 payed_quotas
             );
-            const movements = await this.gastosService.obtenerMovimientosPorGasto(inserted[0].id);
+            const movements = await this.gastosService.obtenerMovementsPorGasto(inserted[0].id);
             inserted[0].movements = movements;
             res.status(201).json({
                 message: "Gasto creado con éxito",
@@ -43,6 +45,9 @@ export class GastosController {
             });
         } catch (err) {
             logRed(err);
+            if (err.message === "Entidad financiera no encontrada o eliminada") {
+                return res.status(404).json({ error: err.message });
+            }
             res.status(500).json({ error: "Error en el servidor" });
         }
     };
@@ -122,11 +127,12 @@ export class GastosController {
                 });
             }
 
-            const updated = await this.gastosService.pagarCuotasLote(purchase_ids);
+            const { updated, failed } = await this.gastosService.pagarCuotasLote(purchase_ids);
 
             res.json({
-                message: "Cuotas pagadas en lote",
+                message: "Lote procesado",
                 updated,
+                failed,
             });
         } catch (err) {
             logRed(err);
