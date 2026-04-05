@@ -25,12 +25,17 @@ export class GastosService {
         return row[0];
     }
 
-    async update(id, name, amount, image_url, fixed_expense, type) {
+    async update(id, name, amount, image_url, fixed_expense, type, category_ids) {
         const [row] = await this.gastosRepository.update(id, name, amount, image_url, fixed_expense, type);
 
         if (row.length === 0) {
             throw new Error("No se pudo actualizar (Gasto no existe)");
         }
+
+        if (Array.isArray(category_ids)) {
+            await this.categoriasRepository.setCategoriasForGasto(id, category_ids);
+        }
+
         return row;
     }
 

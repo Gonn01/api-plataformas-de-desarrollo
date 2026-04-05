@@ -71,9 +71,9 @@ export class GastosController {
     update = async (req, res) => {
         try {
             const { id } = req.params;
-            const { name, amount, image_url, fixed_expense, type } = req.body;
+            const { name, amount, image_url, fixed_expense, type, category_ids } = req.body;
 
-            const response = await this.gastosService.update(id, name, amount, image_url, fixed_expense, type);
+            const response = await this.gastosService.update(id, name, amount, image_url, fixed_expense, type, category_ids);
 
             res.json({
                 message: "Gasto actualizado",
