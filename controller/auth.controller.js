@@ -1,5 +1,6 @@
 
 import { logRed } from "../utils/logs_custom.js";
+import { Currency } from "../utils/enums.js";
 
 export class AuthController {
     constructor(authService) {
@@ -78,17 +79,15 @@ export class AuthController {
                     .json({ error: "Debe enviar 'user_id'" });
             }
 
-            if (preferred_currency === undefined || preferred_currency === null) {
+            if (!preferred_currency || !Object.values(Currency).includes(preferred_currency)) {
                 return res
                     .status(400)
-                    .json({ error: "Debe enviar 'preferred_currency'" });
+                    .json({ error: `Debe enviar 'preferred_currency' válida (${Object.values(Currency).join(', ')})` });
             }
-
-            const numericCurrency = Number(preferred_currency);
 
             const updated = await this.authService.updatePreferredCurrency(
                 Number(user_id),
-                numericCurrency
+                preferred_currency
             );
 
             res.json({
