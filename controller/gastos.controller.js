@@ -22,7 +22,7 @@ export class GastosController {
             } = req.body;
             const { userId } = req.session;
 
-            if (!financial_entity_id || !name || !amount) {
+            if (!financial_entity_id || !name || !amount || !currency_type) {
                 return res.status(400).json({ error: "Faltan campos obligatorios" });
             }
 

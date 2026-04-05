@@ -1,4 +1,5 @@
 import { executeQuery } from "../db.js";
+import { Currency, ExpenseType } from "../utils/enums.js";
 
 export class GastosRepository {
   async getById(id) {
@@ -104,7 +105,12 @@ export class GastosRepository {
     image_url,
     type
   }) {
-    const dbType = type ? String(type).toUpperCase() : null;
+    const dbType = type && Object.values(ExpenseType).includes(String(type).toUpperCase())
+        ? String(type).toUpperCase()
+        : null;
+    const dbCurrency = currency_type && Object.values(Currency).includes(String(currency_type).toUpperCase())
+        ? String(currency_type).toUpperCase()
+        : null;
 
     return await executeQuery(
       `INSERT INTO purchases (
@@ -122,7 +128,7 @@ export class GastosRepository {
         name,
         amount,
         number_of_quotas,
-        currency_type,
+        dbCurrency,
         fixed_expense || false,
         image_url || null,
         dbType,
