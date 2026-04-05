@@ -25,7 +25,7 @@ export class CategoriasRepository {
             `INSERT INTO user_categories (name, color, user_id, deleted, created_at)
              VALUES ($1, $2, $3, false, NOW())
              RETURNING id, name, color, created_at`,
-            [name, color, userId], true
+            [name, color ?? '#52b788', userId], true
         );
     }
 
@@ -35,7 +35,7 @@ export class CategoriasRepository {
              SET name = $1, color = $2
              WHERE id = $3 AND user_id = $4 AND deleted = false
              RETURNING id, name, color, created_at`,
-            [name, color, id, userId], true
+            [name, color ?? '#52b788', id, userId], true
         );
     }
 

@@ -17,7 +17,14 @@ export class DashboardRepository {
                   'payed_quotas', (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = g.id AND movement_type = 'PAYMENT'),
                   'currency_type', g.currency_type,
                   'type', g.type,
-                  'fixed_expense', g.fixed_expense
+                  'fixed_expense', g.fixed_expense,
+                  'categories', COALESCE(
+                    (SELECT json_agg(json_build_object('id', uc.id, 'name', uc.name, 'color', uc.color))
+                     FROM purchases_categories pc
+                     JOIN user_categories uc ON uc.id = pc.category_id
+                     WHERE pc.purchase_id = g.id AND uc.deleted = false),
+                    '[]'::json
+                  )
                 )
               ) FILTER (WHERE g.id IS NOT NULL),
               '[]'::json
