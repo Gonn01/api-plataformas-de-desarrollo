@@ -25,11 +25,23 @@ export class GastosService {
         return row[0];
     }
 
-    async update(id, name, amount, image_url, fixed_expense, type, category_ids) {
+    async update(id, name, amount, image_url, fixed_expense, type, category_ids, payed_quotas) {
+        const current = await this.gastosRepository.getById(id);
+        if (!current.length) throw new Error("No se pudo actualizar (Gasto no existe)");
+
         const [row] = await this.gastosRepository.update(id, name, amount, image_url, fixed_expense, type);
 
         if (row.length === 0) {
             throw new Error("No se pudo actualizar (Gasto no existe)");
+        }
+
+        if (payed_quotas !== undefined && !fixed_expense) {
+            const currentPaid = current[0].payed_quotas;
+            if (payed_quotas === 1 && currentPaid === 0) {
+                await this.movementsRepository.createGastoLog(id, MovementType.PAYMENT, row.amount_per_quota ?? amount, new Date());
+            } else if (payed_quotas === 0 && currentPaid > 0) {
+                await this.movementsRepository.deletePayments(id);
+            }
         }
 
         if (Array.isArray(category_ids)) {
