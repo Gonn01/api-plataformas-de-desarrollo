@@ -25,7 +25,14 @@ export class GastosRepository {
           (SELECT payment_date FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT' ORDER BY payment_date ASC NULLS LAST LIMIT 1) AS first_quota_date,
           CASE WHEN p.fixed_expense = false AND (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT') >= p.number_of_quotas
                THEN (SELECT MAX(payment_date) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT')
-               ELSE NULL END AS finalization_date
+               ELSE NULL END AS finalization_date,
+          COALESCE(
+            (SELECT json_agg(json_build_object('id', c.id, 'name', c.name, 'color', c.color))
+             FROM purchases_categories pc
+             JOIN user_categories c ON c.id = pc.category_id
+             WHERE pc.purchase_id = p.id),
+            '[]'::json
+          ) AS categories
        FROM purchases p
        WHERE p.financial_entity_id = $1 AND p.deleted = false
        ORDER BY p.created_at DESC`,
@@ -106,11 +113,11 @@ export class GastosRepository {
     type
   }) {
     const dbType = type && Object.values(ExpenseType).includes(String(type).toUpperCase())
-        ? String(type).toUpperCase()
-        : null;
+      ? String(type).toUpperCase()
+      : null;
     const dbCurrency = currency_type && Object.values(Currency).includes(String(currency_type).toUpperCase())
-        ? String(currency_type).toUpperCase()
-        : null;
+      ? String(currency_type).toUpperCase()
+      : null;
 
     return await executeQuery(
       `INSERT INTO purchases (
