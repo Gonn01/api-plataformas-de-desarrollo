@@ -131,6 +131,18 @@ export class GastosService {
         return updated;
     }
 
+    async refundCuota(purchase_id) {
+        const rows = await this.gastosRepository.getById(purchase_id);
+
+        if (rows.length === 0) throw new Error("Gasto no encontrado");
+        if (rows[0].payed_quotas === 0) throw new Error("No hay cuotas pagadas para revertir");
+
+        const deleted = await this.movementsRepository.deleteLastPayment(purchase_id);
+        await this.movementsRepository.createGastoLog(purchase_id, MovementType.REFUND, deleted[0]?.amount ?? null, new Date());
+
+        return await this.gastosRepository.getById(purchase_id);
+    }
+
     async pagarCuotasLote(purchaseIds) {
         if (!Array.isArray(purchaseIds) || purchaseIds.length === 0) {
             throw new Error("La lista de IDs de compra es inválida.");

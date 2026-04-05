@@ -37,6 +37,20 @@ export class MovementsRepository {
         );
     }
 
+    async deleteLastPayment(gastoId) {
+        return await executeQuery(
+            `DELETE FROM purchases_movements
+             WHERE id = (
+                 SELECT id FROM purchases_movements
+                 WHERE purchase_id = $1 AND movement_type = 'PAYMENT'
+                 ORDER BY payment_date DESC, created_at DESC
+                 LIMIT 1
+             )
+             RETURNING *`,
+            [gastoId], true
+        );
+    }
+
     async createGastoLog(gastoId, movementType, amount = null, paymentDate = null) {
         return await executeQuery(
             `INSERT INTO purchases_movements (created_at, purchase_id, movement_type, amount, payment_date)

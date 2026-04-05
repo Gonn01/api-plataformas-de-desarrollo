@@ -117,6 +117,25 @@ export class GastosController {
         }
     }
 
+    refundCuota = async (req, res) => {
+        try {
+            const { id } = req.params;
+
+            const updated = await this.gastosService.refundCuota(id);
+
+            res.json({
+                message: "Cuota revertida con éxito",
+                data: updated[0]
+            });
+        } catch (err) {
+            logRed(err);
+            if (err.message === "Gasto no encontrado" || err.message === "No hay cuotas pagadas para revertir") {
+                return res.status(400).json({ error: err.message });
+            }
+            res.status(500).json({ error: "Error en el servidor" });
+        }
+    }
+
     actualizarCategorias = async (req, res) => {
         try {
             const { id } = req.params;
