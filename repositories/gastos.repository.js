@@ -19,7 +19,7 @@ export class GastosRepository {
 
   async getGastosByEntidad(entidadId) {
     return await executeQuery(
-      `SELECT p.*,
+      `SELECT p.*, 
           (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT')::int AS payed_quotas,
           CASE WHEN p.number_of_quotas > 0 THEN p.amount::numeric / p.number_of_quotas ELSE p.amount END AS amount_per_quota,
           (SELECT payment_date FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT' ORDER BY payment_date ASC NULLS LAST LIMIT 1) AS first_quota_date,
