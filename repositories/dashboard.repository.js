@@ -18,6 +18,8 @@ export class DashboardRepository {
                   'currency_type', g.currency_type,
                   'type', g.type,
                   'fixed_expense', g.fixed_expense,
+                  'created_at', g.created_at,
+                  'last_payment_date', (SELECT MAX(payment_date) FROM purchases_movements WHERE purchase_id = g.id AND movement_type = 'PAYMENT'),
                   'categories', COALESCE(
                     (SELECT json_agg(json_build_object('id', uc.id, 'name', uc.name, 'color', uc.color))
                      FROM purchases_categories pc
