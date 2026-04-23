@@ -94,5 +94,48 @@ export class EntidadesFinancierasController {
             res.status(500).json({ error: "Error en el servidor" });
         }
     }
+
+    vincularUsuario = async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { email } = req.body;
+            const { userId } = req.session;
+
+            if (!email) {
+                return res.status(400).json({ error: "Falta el campo 'email'" });
+            }
+
+            const response = await this.entidadesFinancierasService.vincularUsuario(id, userId, email);
+
+            res.json({
+                message: "Usuario vinculado con éxito",
+                data: response
+            });
+        } catch (err) {
+            logRed(err);
+            if (err.message === "Entidad no encontrada") return res.status(404).json({ error: err.message });
+            if (err.message === "No existe un usuario registrado con ese email") return res.status(404).json({ error: err.message });
+            if (err.message === "No podés vincular tu propia cuenta") return res.status(400).json({ error: err.message });
+            res.status(500).json({ error: "Error en el servidor" });
+        }
+    }
+
+    desvincularUsuario = async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { userId } = req.session;
+
+            const response = await this.entidadesFinancierasService.desvincularUsuario(id, userId);
+
+            res.json({
+                message: "Usuario desvinculado con éxito",
+                data: response
+            });
+        } catch (err) {
+            logRed(err);
+            if (err.message === "Entidad no encontrada") return res.status(404).json({ error: err.message });
+            res.status(500).json({ error: "Error en el servidor" });
+        }
+    }
 }
 

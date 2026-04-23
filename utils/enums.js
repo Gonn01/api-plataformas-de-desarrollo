@@ -15,3 +15,9 @@ export const ExpenseType = Object.freeze({
     EGRESO:  'EGRESO',
     INGRESO: 'INGRESO',
 });
+
+export const ExpenseStatus = Object.freeze({
+    ACTIVE:            'ACTIVE',
+    PENDING_APPROVAL:  'PENDING_APPROVAL',
+    REJECTED:          'REJECTED',
+});

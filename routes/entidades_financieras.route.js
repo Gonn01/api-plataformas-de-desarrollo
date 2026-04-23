@@ -10,5 +10,7 @@ router.get("/:id", controller.obtenerPorId);
 router.post("/", controller.crear);
 router.delete("/:id", controller.eliminar);
 router.put("/:id", controller.actualizar);
+router.put("/:id/vincular-usuario", controller.vincularUsuario);
+router.delete("/:id/vincular-usuario", controller.desvincularUsuario);
 
 export default router;

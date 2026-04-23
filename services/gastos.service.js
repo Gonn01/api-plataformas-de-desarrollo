@@ -1,4 +1,4 @@
-import { MovementType } from "../utils/enums.js";
+import { MovementType, ExpenseStatus } from "../utils/enums.js";
 
 export class GastosService {
     constructor({ gastosRepository, movementsRepository, entidadesFinancierasRepository, categoriasRepository }) {
@@ -85,7 +85,7 @@ export class GastosService {
             currency_type,
             fixed_expense,
             image_url,
-            type
+            type,
         });
 
         const gastoId = rows[0].id;
@@ -108,6 +108,24 @@ export class GastosService {
         }
 
         rows[0].categories = await this.categoriasRepository.getCategoriasByGasto(gastoId);
+
+        // Si la entidad tiene un usuario vinculado, crear la copia pendiente para ese usuario
+        if (entidad[0].linked_user_id) {
+            const sharedRows = await this.gastosRepository.create({
+                financial_entity_id: null,
+                name,
+                amount,
+                number_of_quotas,
+                currency_type,
+                fixed_expense,
+                image_url,
+                type,
+                status: ExpenseStatus.PENDING_APPROVAL,
+                shared_from_id: gastoId,
+                receiver_user_id: entidad[0].linked_user_id,
+            });
+            await this.movementsRepository.createGastoLog(sharedRows[0].id, MovementType.CREATION);
+        }
 
         return rows;
     }
