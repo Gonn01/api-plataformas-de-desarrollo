@@ -151,6 +151,17 @@ export class GastosRepository {
     );
   }
 
+  async getEntityOwnerByPurchaseId(purchaseId) {
+    return await executeQuery(
+      `SELECT fe.user_id
+       FROM purchases p
+       JOIN financial_entities fe ON fe.id = p.financial_entity_id
+       WHERE p.id = $1 AND p.deleted = false
+       LIMIT 1`,
+      [purchaseId], true
+    );
+  }
+
   async getSharedCopyByOriginalId(originalId) {
     return await executeQuery(
       `SELECT * FROM purchases WHERE shared_from_id = $1 AND deleted = false LIMIT 1`,

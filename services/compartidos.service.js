@@ -29,6 +29,11 @@ export class CompartidosService {
             const [newEntity] = await this.entidadesFinancierasRepository.create(newEntityName, userId);
             await this.movementsRepository.createEntidadLog(newEntity.id, MovementType.CREATION);
             entityId = newEntity.id;
+
+            const senderRows = await this.gastosRepository.getEntityOwnerByPurchaseId(gasto.shared_from_id);
+            if (senderRows.length) {
+                await this.entidadesFinancierasRepository.vincularUsuario(entityId, userId, senderRows[0].user_id);
+            }
         }
 
         if (!entityId) throw new Error("Debe seleccionar una entidad o proporcionar un nombre para crear una nueva");
