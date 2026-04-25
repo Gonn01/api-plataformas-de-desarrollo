@@ -1,4 +1,5 @@
 import { MovementType, ExpenseStatus } from "../utils/enums.js";
+import { triggerCompartidos } from "../utils/pusher.js";
 
 export class GastosService {
     constructor({ gastosRepository, movementsRepository, entidadesFinancierasRepository, categoriasRepository }) {
@@ -112,6 +113,7 @@ export class GastosService {
 
         // Si la entidad tiene un usuario vinculado, crear la copia pendiente para ese usuario
         if (entidad[0].linked_user_id) {
+            await triggerCompartidos(entidad[0].linked_user_id, 'compartido.nuevo', { gastoId });
             const sharedRows = await this.gastosRepository.create({
                 financial_entity_id: null,
                 name,

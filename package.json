@@ -29,7 +29,8 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.16.3",
-    "postgres": "^3.4.7"
+    "postgres": "^3.4.7",
+    "pusher": "^5.3.3"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^2.1.9",

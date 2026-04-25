@@ -1,4 +1,5 @@
 import { MovementType, ExpenseStatus } from "../utils/enums.js";
+import { triggerCompartidos } from "../utils/pusher.js";
 
 export class CompartidosService {
     constructor({ gastosRepository, entidadesFinancierasRepository, movementsRepository }) {
@@ -41,13 +42,18 @@ export class CompartidosService {
         const entidad = await this.entidadesFinancierasRepository.getById(entityId, userId);
         if (!entidad.length) throw new Error("Entidad no encontrada o no pertenece al usuario");
 
-        const [updated] = await Promise.all([
+        const [[updated], senderRows] = await Promise.all([
             this.gastosRepository.aprobarGasto(gastoId, entityId),
-            this.gastosRepository.updateStatus(gasto.shared_from_id, ExpenseStatus.ACTIVE),
-            this.movementsRepository.createGastoLog(gastoId, MovementType.CREATION),
+            this.gastosRepository.getEntityOwnerByPurchaseId(gasto.shared_from_id),
         ]);
 
-        return updated[0];
+        await Promise.all([
+            this.gastosRepository.updateStatus(gasto.shared_from_id, ExpenseStatus.ACTIVE),
+            this.movementsRepository.createGastoLog(gastoId, MovementType.CREATION),
+            senderRows.length && triggerCompartidos(senderRows[0].user_id, 'compartido.aprobado', { gastoId }),
+        ]);
+
+        return updated;
     }
 
     async rechazar(gastoId, userId) {
@@ -58,11 +64,17 @@ export class CompartidosService {
         if (String(gasto.receiver_user_id) !== String(userId)) throw new Error("No autorizado");
         if (gasto.status !== ExpenseStatus.PENDING_APPROVAL) throw new Error("El gasto no está pendiente de aprobación");
 
-        const [updated] = await Promise.all([
+        const [[updated], senderRows] = await Promise.all([
             this.gastosRepository.updateStatus(gastoId, ExpenseStatus.REJECTED),
-            this.gastosRepository.updateStatus(gasto.shared_from_id, ExpenseStatus.REJECTED),
+            this.gastosRepository.getEntityOwnerByPurchaseId(gasto.shared_from_id),
         ]);
-        return updated[0];
+
+        await Promise.all([
+            this.gastosRepository.updateStatus(gasto.shared_from_id, ExpenseStatus.REJECTED),
+            senderRows.length && triggerCompartidos(senderRows[0].user_id, 'compartido.rechazado', { gastoId }),
+        ]);
+
+        return updated;
     }
 
     async reintentar(gastoId, userId) {
@@ -80,10 +92,12 @@ export class CompartidosService {
         const copy = copyRows[0];
         if (copy.status !== ExpenseStatus.REJECTED) throw new Error("El gasto compartido no está rechazado");
 
-        const [updated] = await Promise.all([
+        const [[updated]] = await Promise.all([
             this.gastosRepository.updateStatus(copy.id, ExpenseStatus.PENDING_APPROVAL),
             this.gastosRepository.updateStatus(gastoId, ExpenseStatus.PENDING_APPROVAL),
+            triggerCompartidos(copy.receiver_user_id, 'compartido.nuevo', { gastoId }),
         ]);
-        return updated[0];
+
+        return updated;
     }
 }
