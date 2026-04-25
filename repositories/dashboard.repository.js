@@ -38,6 +38,7 @@ export class DashboardRepository {
                   SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = g.id AND movement_type = 'PAYMENT'
               ) < g.number_of_quotas)
               AND g.deleted = false
+              AND g.status = 'ACTIVE'
             WHERE e.user_id = $1
               AND e.deleted = false
             GROUP BY e.id ORDER BY e.created_at DESC;

@@ -170,7 +170,12 @@ export class GastosRepository {
           u_sender.email AS sender_email,
           fe_original.name AS sender_entity_name,
           fe_assigned.id AS assigned_entity_id,
-          fe_assigned.name AS assigned_entity_name
+          fe_assigned.name AS assigned_entity_name,
+          (SELECT fe_sug.id FROM financial_entities fe_sug
+           WHERE fe_sug.user_id = $1
+             AND fe_sug.linked_user_id = fe_original.user_id
+             AND fe_sug.deleted = false
+           LIMIT 1) AS suggested_entity_id
        FROM purchases p
        JOIN purchases p_original ON p_original.id = p.shared_from_id AND p_original.deleted = false
        JOIN financial_entities fe_original ON fe_original.id = p_original.financial_entity_id

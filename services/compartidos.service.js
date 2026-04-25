@@ -36,8 +36,11 @@ export class CompartidosService {
         const entidad = await this.entidadesFinancierasRepository.getById(entityId, userId);
         if (!entidad.length) throw new Error("Entidad no encontrada o no pertenece al usuario");
 
-        const updated = await this.gastosRepository.aprobarGasto(gastoId, entityId);
-        await this.movementsRepository.createGastoLog(gastoId, MovementType.CREATION);
+        const [updated] = await Promise.all([
+            this.gastosRepository.aprobarGasto(gastoId, entityId),
+            this.gastosRepository.updateStatus(gasto.shared_from_id, ExpenseStatus.ACTIVE),
+            this.movementsRepository.createGastoLog(gastoId, MovementType.CREATION),
+        ]);
 
         return updated[0];
     }
@@ -50,7 +53,10 @@ export class CompartidosService {
         if (String(gasto.receiver_user_id) !== String(userId)) throw new Error("No autorizado");
         if (gasto.status !== ExpenseStatus.PENDING_APPROVAL) throw new Error("El gasto no está pendiente de aprobación");
 
-        const updated = await this.gastosRepository.updateStatus(gastoId, ExpenseStatus.REJECTED);
+        const [updated] = await Promise.all([
+            this.gastosRepository.updateStatus(gastoId, ExpenseStatus.REJECTED),
+            this.gastosRepository.updateStatus(gasto.shared_from_id, ExpenseStatus.REJECTED),
+        ]);
         return updated[0];
     }
 
@@ -69,7 +75,10 @@ export class CompartidosService {
         const copy = copyRows[0];
         if (copy.status !== ExpenseStatus.REJECTED) throw new Error("El gasto compartido no está rechazado");
 
-        const updated = await this.gastosRepository.updateStatus(copy.id, ExpenseStatus.PENDING_APPROVAL);
+        const [updated] = await Promise.all([
+            this.gastosRepository.updateStatus(copy.id, ExpenseStatus.PENDING_APPROVAL),
+            this.gastosRepository.updateStatus(gastoId, ExpenseStatus.PENDING_APPROVAL),
+        ]);
         return updated[0];
     }
 }

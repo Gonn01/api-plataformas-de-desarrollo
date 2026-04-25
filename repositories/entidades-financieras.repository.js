@@ -54,6 +54,15 @@ export class EntidadesFinancierasRepository {
         );
     }
 
+    async findByLinkedUser(userId, linkedUserId) {
+        return await executeQuery(
+            `SELECT id, name FROM financial_entities
+             WHERE user_id = $1 AND linked_user_id = $2 AND deleted = false
+             LIMIT 1`,
+            [userId, linkedUserId], true
+        );
+    }
+
     async vincularUsuario(id, userId, linkedUserId) {
         return await executeQuery(
             `UPDATE financial_entities

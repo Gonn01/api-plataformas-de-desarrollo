@@ -86,6 +86,7 @@ export class GastosService {
             fixed_expense,
             image_url,
             type,
+            status: entidad[0].linked_user_id ? ExpenseStatus.PENDING_APPROVAL : ExpenseStatus.ACTIVE,
         });
 
         const gastoId = rows[0].id;
