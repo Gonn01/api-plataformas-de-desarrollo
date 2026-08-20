@@ -167,8 +167,10 @@ export class GastosController {
 
             res.json({
                 message: "Lote procesado",
-                updated,
-                failed,
+                data: {
+                    updated,
+                    failed
+                }
             });
         } catch (err) {
             logRed(err);
