@@ -116,6 +116,7 @@ export class EntidadesFinancierasController {
             if (err.message === "Entidad no encontrada") return res.status(404).json({ error: err.message });
             if (err.message === "No existe un usuario registrado con ese email") return res.status(404).json({ error: err.message });
             if (err.message === "No podés vincular tu propia cuenta") return res.status(400).json({ error: err.message });
+            if (err.message.startsWith("Ya tenés la entidad")) return res.status(400).json({ error: err.message });
             res.status(500).json({ error: "Error en el servidor" });
         }
     }
