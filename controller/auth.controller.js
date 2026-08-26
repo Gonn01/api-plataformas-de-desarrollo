@@ -1,6 +1,5 @@
 
 import { logRed } from "../utils/logs_custom.js";
-import { Currency } from "../utils/enums.js";
 
 export class AuthController {
     constructor(authService) {
@@ -63,37 +62,6 @@ export class AuthController {
                 data: response,
             });
 
-        } catch (err) {
-            logRed(err);
-            res.status(500).json({ error: "Error en el servidor" });
-        }
-    };
-
-    updatePreferredCurrency = async (req, res) => {
-        try {
-            const { user_id, preferred_currency } = req.body;
-
-            if (!user_id) {
-                return res
-                    .status(400)
-                    .json({ error: "Debe enviar 'user_id'" });
-            }
-
-            if (!preferred_currency || !Object.values(Currency).includes(preferred_currency)) {
-                return res
-                    .status(400)
-                    .json({ error: `Debe enviar 'preferred_currency' válida (${Object.values(Currency).join(', ')})` });
-            }
-
-            const updated = await this.authService.updatePreferredCurrency(
-                Number(user_id),
-                preferred_currency
-            );
-
-            res.json({
-                message: "Moneda preferida actualizada",
-                data: updated,
-            });
         } catch (err) {
             logRed(err);
             res.status(500).json({ error: "Error en el servidor" });

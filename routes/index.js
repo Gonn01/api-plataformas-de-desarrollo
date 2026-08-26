@@ -1,5 +1,6 @@
 import express from "express";
 import authRoutes from "./auth.route.js";
+import userRoutes from "./user.route.js";
 import entidadesFinancierasRoutes from "./entidades_financieras.route.js";
 import dashboardRoutes from "./dashboard.route.js"
 import gastosRoutes from "./gastos.routes.js";
@@ -11,6 +12,7 @@ const router = express.Router();
 
 router.use("/auth", authRoutes);
 router.use(verifyToken);
+router.use("/user", userRoutes);
 router.use("/entidades-financieras", entidadesFinancierasRoutes);
 router.use("/dashboard", dashboardRoutes)
 router.use('/gastos', gastosRoutes);

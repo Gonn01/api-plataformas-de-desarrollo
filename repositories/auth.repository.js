@@ -24,14 +24,4 @@ export class AuthRepository {
         );
     }
 
-    async updatePreferredCurrency(userId, preferredCurrency) {
-        return await executeQuery(
-            `UPDATE users
-             SET preferred_currency = $2
-             WHERE id = $1
-             RETURNING id, name, email, avatar, firebase_user_id, preferred_currency`,
-            [userId, preferredCurrency], true
-        );
-    }
-
 }

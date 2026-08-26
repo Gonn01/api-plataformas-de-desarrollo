@@ -21,7 +21,6 @@ describe("AuthController", () => {
             register: vi.fn(),
             login: vi.fn(),
             firebaseLogin: vi.fn(),
-            updatePreferredCurrency: vi.fn(),
         };
         controller = new AuthController(authService);
     });
@@ -141,55 +140,6 @@ describe("AuthController", () => {
             authService.firebaseLogin.mockRejectedValue(new Error("DB error"));
 
             await controller.firebaseLogin(req, res);
-
-            expect(res.status).toHaveBeenCalledWith(500);
-            expect(res.json).toHaveBeenCalledWith({ error: "Error en el servidor" });
-        });
-    });
-
-    // ─── updatePreferredCurrency ─────────────────────────────────────────────
-
-    describe("updatePreferredCurrency", () => {
-        it("responde con los datos actualizados cuando todo está bien", async () => {
-            const req = makeReq({ body: { user_id: "1", preferred_currency: 0 } });
-            const res = makeRes();
-            authService.updatePreferredCurrency.mockResolvedValue({ id: 1, preferred_currency: 0 });
-
-            await controller.updatePreferredCurrency(req, res);
-
-            expect(authService.updatePreferredCurrency).toHaveBeenCalledWith(1, 0);
-            expect(res.json).toHaveBeenCalledWith({
-                message: "Moneda preferida actualizada",
-                data: { id: 1, preferred_currency: 0 },
-            });
-        });
-
-        it("responde 400 cuando falta user_id", async () => {
-            const req = makeReq({ body: { preferred_currency: 0 } });
-            const res = makeRes();
-
-            await controller.updatePreferredCurrency(req, res);
-
-            expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith({ error: "Debe enviar 'user_id'" });
-        });
-
-        it("responde 400 cuando falta preferred_currency", async () => {
-            const req = makeReq({ body: { user_id: "1" } });
-            const res = makeRes();
-
-            await controller.updatePreferredCurrency(req, res);
-
-            expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith({ error: "Debe enviar 'preferred_currency'" });
-        });
-
-        it("responde 500 cuando el servicio lanza un error", async () => {
-            const req = makeReq({ body: { user_id: "1", preferred_currency: 1 } });
-            const res = makeRes();
-            authService.updatePreferredCurrency.mockRejectedValue(new Error("DB error"));
-
-            await controller.updatePreferredCurrency(req, res);
 
             expect(res.status).toHaveBeenCalledWith(500);
             expect(res.json).toHaveBeenCalledWith({ error: "Error en el servidor" });
