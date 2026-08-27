@@ -44,6 +44,9 @@ export class EntidadesFinancierasService {
   }
 
   async crear(name, userId) {
+    const existing = await this.entidadesFinancierasRepository.findByName(userId, name);
+    if (existing.length) throw new Error("Ya existe esta entidad");
+
     const [row] = await this.entidadesFinancierasRepository.create(name, userId);
 
     await this.movementsRepository.createEntidadLog(row.id, MovementType.CREATION);
@@ -54,6 +57,9 @@ export class EntidadesFinancierasService {
   async actualizar(id, name, userId) {
     const currentRows = await this.entidadesFinancierasRepository.getById(id, userId);
     if (currentRows.length === 0) throw new Error("Entidad no encontrada");
+
+    const existing = await this.entidadesFinancierasRepository.findByName(userId, name, id);
+    if (existing.length) throw new Error("Ya existe esta entidad");
 
     const [row] = await this.entidadesFinancierasRepository.update(id, name, userId);
 

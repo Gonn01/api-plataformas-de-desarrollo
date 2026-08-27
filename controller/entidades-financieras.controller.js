@@ -55,6 +55,7 @@ export class EntidadesFinancierasController {
             });
         } catch (err) {
             logRed(err);
+            if (err.message === "Ya existe esta entidad") return res.status(400).json({ error: err.message });
             res.status(500).json({ error: "Error en el servidor" });
         }
     }
@@ -74,6 +75,8 @@ export class EntidadesFinancierasController {
             });
         } catch (err) {
             logRed(err);
+            if (err.message === "Entidad no encontrada") return res.status(404).json({ error: err.message });
+            if (err.message === "Ya existe esta entidad") return res.status(400).json({ error: err.message });
             res.status(500).json({ error: "Error en el servidor" });
         }
     }

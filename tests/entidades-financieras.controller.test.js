@@ -128,6 +128,17 @@ describe("EntidadesFinancierasController", () => {
             expect(res.status).toHaveBeenCalledWith(500);
             expect(res.json).toHaveBeenCalledWith({ error: "Error en el servidor" });
         });
+
+        it("responde 400 cuando la entidad ya existe", async () => {
+            const req = makeReq({ body: { name: "Banco Galicia" } });
+            const res = makeRes();
+            service.crear.mockRejectedValue(new Error("Ya existe esta entidad"));
+
+            await controller.crear(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith({ error: "Ya existe esta entidad" });
+        });
     });
 
     // ─── actualizar ───────────────────────────────────────────────────────────
@@ -160,6 +171,28 @@ describe("EntidadesFinancierasController", () => {
 
             expect(res.status).toHaveBeenCalledWith(500);
             expect(res.json).toHaveBeenCalledWith({ error: "Error en el servidor" });
+        });
+
+        it("responde 400 cuando ya existe otra entidad con ese nombre", async () => {
+            const req = makeReq({ params: { id: "5" }, body: { name: "Nombre Repetido" } });
+            const res = makeRes();
+            service.actualizar.mockRejectedValue(new Error("Ya existe esta entidad"));
+
+            await controller.actualizar(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith({ error: "Ya existe esta entidad" });
+        });
+
+        it("responde 404 cuando la entidad no existe", async () => {
+            const req = makeReq({ params: { id: "5" }, body: { name: "Nuevo Nombre" } });
+            const res = makeRes();
+            service.actualizar.mockRejectedValue(new Error("Entidad no encontrada"));
+
+            await controller.actualizar(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(404);
+            expect(res.json).toHaveBeenCalledWith({ error: "Entidad no encontrada" });
         });
     });
 

@@ -25,6 +25,24 @@ export class EntidadesFinancierasRepository {
         );
     }
 
+    async findByName(userId, name, excludeId = null) {
+        if (excludeId) {
+            return await executeQuery(
+                `SELECT id, name FROM financial_entities
+                 WHERE user_id = $1 AND LOWER(name) = LOWER($2) AND deleted = false AND id != $3
+                 LIMIT 1`,
+                [userId, name, excludeId], true
+            );
+        }
+
+        return await executeQuery(
+            `SELECT id, name FROM financial_entities
+             WHERE user_id = $1 AND LOWER(name) = LOWER($2) AND deleted = false
+             LIMIT 1`,
+            [userId, name], true
+        );
+    }
+
     async create(name, userId) {
         return await executeQuery(
             `INSERT INTO financial_entities (name, user_id, deleted, created_at)
