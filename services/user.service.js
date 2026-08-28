@@ -18,8 +18,8 @@ export class UserService {
         return rows[0];
     }
 
-    async updateSueldo(userId, sueldo) {
-        const rows = await this.userRepository.updateSueldo(userId, sueldo);
+    async updateSueldo(userId, sueldo, sueldoCurrency) {
+        const rows = await this.userRepository.updateSueldo(userId, sueldo, sueldoCurrency);
 
         if (rows.length === 0) {
             throw new Error("Usuario no encontrado");

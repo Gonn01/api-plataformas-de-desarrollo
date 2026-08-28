@@ -77,17 +77,41 @@ describe("UserController", () => {
 
     describe("updateSueldo", () => {
         it("responde con los datos actualizados cuando todo está bien", async () => {
+            const req = makeReq({ body: { sueldo: 1500.5, sueldo_currency: "USD" } });
+            const res = makeRes();
+            userService.updateSueldo.mockResolvedValue({ id: 1, sueldo: 1500.5, sueldo_currency: "USD" });
+
+            await controller.updateSueldo(req, res);
+
+            expect(userService.updateSueldo).toHaveBeenCalledWith(1, 1500.5, "USD");
+            expect(res.json).toHaveBeenCalledWith({
+                message: "Sueldo actualizado",
+                data: { id: 1, sueldo: 1500.5, sueldo_currency: "USD" },
+            });
+        });
+
+        it("responde con los datos actualizados cuando no se envía sueldo_currency", async () => {
             const req = makeReq({ body: { sueldo: 1500.5 } });
             const res = makeRes();
             userService.updateSueldo.mockResolvedValue({ id: 1, sueldo: 1500.5 });
 
             await controller.updateSueldo(req, res);
 
-            expect(userService.updateSueldo).toHaveBeenCalledWith(1, 1500.5);
+            expect(userService.updateSueldo).toHaveBeenCalledWith(1, 1500.5, undefined);
             expect(res.json).toHaveBeenCalledWith({
                 message: "Sueldo actualizado",
                 data: { id: 1, sueldo: 1500.5 },
             });
+        });
+
+        it("responde 400 cuando sueldo_currency no es válida", async () => {
+            const req = makeReq({ body: { sueldo: 100, sueldo_currency: "XYZ" } });
+            const res = makeRes();
+
+            await controller.updateSueldo(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(userService.updateSueldo).not.toHaveBeenCalled();
         });
 
         it("responde 400 cuando falta sueldo", async () => {

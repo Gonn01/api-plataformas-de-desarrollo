@@ -35,7 +35,7 @@ export class UserController {
     updateSueldo = async (req, res) => {
         try {
             const userId = req.session.userId;
-            const { sueldo } = req.body;
+            const { sueldo, sueldo_currency } = req.body;
 
             if (sueldo === undefined || sueldo === null || sueldo === "") {
                 return res
@@ -51,9 +51,16 @@ export class UserController {
                     .json({ error: "Debe enviar 'sueldo' como un número mayor o igual a 0" });
             }
 
+            if (sueldo_currency !== undefined && !Object.values(Currency).includes(sueldo_currency)) {
+                return res
+                    .status(400)
+                    .json({ error: `Debe enviar 'sueldo_currency' válida (${Object.values(Currency).join(', ')})` });
+            }
+
             const updated = await this.userService.updateSueldo(
                 userId,
-                sueldoNumber
+                sueldoNumber,
+                sueldo_currency
             );
 
             res.json({
