@@ -6,6 +6,10 @@ export class DashboardRepository {
       SELECT
               e.id,
               e.name,
+              (SELECT COUNT(*) FROM purchases pp
+                 WHERE pp.financial_entity_id = e.id
+                   AND pp.deleted = false
+                   AND pp.status = 'PENDING_APPROVAL')::int AS pending_count,
               COALESCE(
               json_agg(
                 json_build_object(

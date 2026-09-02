@@ -19,6 +19,7 @@ export class GastosController {
                 type,
                 payed_quotas,
                 category_ids,
+                payment_entity_id,
             } = req.body;
             const { userId } = req.session;
 
@@ -37,7 +38,8 @@ export class GastosController {
                 type,
                 userId,
                 payed_quotas,
-                category_ids
+                category_ids,
+                payment_entity_id
             );
             res.status(201).json({
                 message: "Gasto creado con éxito",
@@ -45,7 +47,10 @@ export class GastosController {
             });
         } catch (err) {
             logRed(err);
-            if (err.message === "Entidad financiera no encontrada o eliminada") {
+            if (
+                err.message === "Entidad financiera no encontrada o eliminada" ||
+                err.message === "Entidad de pago no encontrada o eliminada"
+            ) {
                 return res.status(404).json({ error: err.message });
             }
             res.status(500).json({ error: "Error en el servidor" });
@@ -71,9 +76,9 @@ export class GastosController {
     update = async (req, res) => {
         try {
             const { id } = req.params;
-            const { name, amount, image_url, fixed_expense, type, category_ids, payed_quotas } = req.body;
+            const { name, amount, image_url, fixed_expense, type, category_ids, payed_quotas, apply_to_linked } = req.body;
 
-            const response = await this.gastosService.update(id, name, amount, image_url, fixed_expense, type, category_ids, payed_quotas);
+            const response = await this.gastosService.update(id, name, amount, image_url, fixed_expense, type, category_ids, payed_quotas, apply_to_linked);
 
             res.json({
                 message: "Gasto actualizado",
@@ -88,8 +93,10 @@ export class GastosController {
     delete = async (req, res) => {
         try {
             const { id } = req.params;
+            const deleteLinked = req.body?.delete_linked ?? req.query?.delete_linked;
+            const shouldDeleteLinked = deleteLinked === true || deleteLinked === "true";
 
-            await this.gastosService.delete(id);
+            await this.gastosService.delete(id, shouldDeleteLinked);
 
             res.json({
                 message: "Gasto eliminado correctamente",

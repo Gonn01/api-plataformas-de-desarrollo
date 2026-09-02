@@ -139,14 +139,14 @@ describe("GastosController", () => {
 
     describe("update", () => {
         it("responde con el gasto actualizado", async () => {
-            const req = makeReq({ params: { id: "10" }, body: { name: "Netflix Premium", amount: 20000, image_url: null, fixed_expense: false, type: 0 } });
+            const req = makeReq({ params: { id: "10" }, body: { name: "Netflix Premium", amount: 20000, image_url: null, fixed_expense: false, type: 0, category_ids: [1], payed_quotas: 0, apply_to_linked: true } });
             const res = makeRes();
             const mockUpdated = { id: 10, name: "Netflix Premium", amount: 20000 };
             service.update.mockResolvedValue(mockUpdated);
 
             await controller.update(req, res);
 
-            expect(service.update).toHaveBeenCalledWith("10", "Netflix Premium", 20000, null, false, 0);
+            expect(service.update).toHaveBeenCalledWith("10", "Netflix Premium", 20000, null, false, 0, [1], 0, true);
             expect(res.json).toHaveBeenCalledWith({ message: "Gasto actualizado", data: mockUpdated });
         });
 
@@ -172,7 +172,7 @@ describe("GastosController", () => {
 
             await controller.delete(req, res);
 
-            expect(service.delete).toHaveBeenCalledWith("10");
+            expect(service.delete).toHaveBeenCalledWith("10", false);
             expect(res.json).toHaveBeenCalledWith({ message: "Gasto eliminado correctamente", data: "10" });
         });
 

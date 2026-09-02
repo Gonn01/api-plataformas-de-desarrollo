@@ -1,5 +1,6 @@
 import { executeQuery } from "../db.js";
 import { Currency, ExpenseType, ExpenseStatus } from "../utils/enums.js";
+import { logRed, logGreen } from "../utils/logs_custom.js";
 
 const CALCULATED_FIELDS = `
   (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT')::int AS payed_quotas,
@@ -8,8 +9,33 @@ const CALCULATED_FIELDS = `
   (SELECT MAX(payment_date) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT') AS last_payment_date,
   CASE WHEN p.fixed_expense = false AND (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT') >= p.number_of_quotas
        THEN (SELECT MAX(payment_date) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT')
-       ELSE NULL END AS finalization_date
+       ELSE NULL END AS finalization_date,
+  (SELECT lnk.financial_entity_id FROM purchases lnk WHERE lnk.id = p.linked_purchase_id) AS linked_financial_entity_id,
+  (SELECT lnk.name FROM purchases lnk WHERE lnk.id = p.linked_purchase_id) AS linked_name,
+  (SELECT lnk.type FROM purchases lnk WHERE lnk.id = p.linked_purchase_id) AS linked_type
 `;
+
+/**
+ * Asegura las columnas extra de "purchases" que no vienen del esquema base.
+ * Se llama una vez al arrancar el server (index.js), igual que ensureReconcileSchema.
+ */
+export async function ensureGastosSchema() {
+  const steps = [
+    ["purchases.linked_purchase_id", `
+      ALTER TABLE purchases ADD COLUMN IF NOT EXISTS linked_purchase_id INTEGER
+    `],
+  ];
+
+  for (const [name, sql] of steps) {
+    try {
+      await executeQuery(sql);
+    } catch (err) {
+      logRed(`[gastos schema] falló "${name}": ${err.message}`);
+      throw err;
+    }
+  }
+  logGreen("[gastos schema] OK");
+}
 
 export class GastosRepository {
   async getById(id) {
@@ -36,6 +62,33 @@ export class GastosRepository {
        ORDER BY p.created_at DESC`,
       [entidadId], true
     );
+  }
+
+  async getPendingByEntidad(entidadId) {
+    return await executeQuery(
+      `SELECT p.*, ${CALCULATED_FIELDS},
+          COALESCE(
+            (SELECT json_agg(json_build_object('id', c.id, 'name', c.name, 'color', c.color))
+             FROM purchases_categories pc
+             JOIN user_categories c ON c.id = pc.category_id
+             WHERE pc.purchase_id = p.id),
+            '[]'::json
+          ) AS categories
+       FROM purchases p
+       WHERE p.financial_entity_id = $1 AND p.deleted = false AND p.status = 'PENDING_APPROVAL'
+       ORDER BY p.created_at DESC`,
+      [entidadId], true
+    );
+  }
+
+  async countPendingByEntidad(entidadId) {
+    const rows = await executeQuery(
+      `SELECT COUNT(*)::int AS count
+       FROM purchases
+       WHERE financial_entity_id = $1 AND deleted = false AND status = 'PENDING_APPROVAL'`,
+      [entidadId], true
+    );
+    return rows[0]?.count ?? 0;
   }
 
   async pagarCuota(id) {
@@ -86,6 +139,25 @@ export class GastosRepository {
     );
   }
 
+  // Vincula dos compras entre sí (relación mutua): a.linked = b y b.linked = a.
+  async linkPurchases(aId, bId) {
+    return await executeQuery(
+      `UPDATE purchases
+       SET linked_purchase_id = CASE id WHEN $1 THEN $2 WHEN $2 THEN $1 END
+       WHERE id IN ($1, $2)`,
+      [aId, bId], true
+    );
+  }
+
+  // Rompe el vínculo tanto desde la compra $1 como desde la que la apuntaba.
+  async unlink(id) {
+    return await executeQuery(
+      `UPDATE purchases SET linked_purchase_id = NULL
+       WHERE id = $1 OR linked_purchase_id = $1`,
+      [id], true
+    );
+  }
+
   async create({
     financial_entity_id,
     name,
@@ -98,6 +170,7 @@ export class GastosRepository {
     status = ExpenseStatus.ACTIVE,
     shared_from_id = null,
     receiver_user_id = null,
+    linked_purchase_id = null,
   }) {
     const dbType = type && Object.values(ExpenseType).includes(String(type).toUpperCase())
       ? String(type).toUpperCase()
@@ -110,9 +183,9 @@ export class GastosRepository {
       `INSERT INTO purchases (
         financial_entity_id, name, amount, number_of_quotas,
         currency_type, fixed_expense, deleted, image_url, created_at, type,
-        status, shared_from_id, receiver_user_id
+        status, shared_from_id, receiver_user_id, linked_purchase_id
       )
-      VALUES ($1,$2,$3,$4,$5,$6,false,$7,now(),$8,$9,$10,$11)
+      VALUES ($1,$2,$3,$4,$5,$6,false,$7,now(),$8,$9,$10,$11,$12)
       RETURNING *,
           0::int AS payed_quotas,
           CASE WHEN $4 > 0 THEN $3::numeric / $4 ELSE $3 END AS amount_per_quota,
@@ -130,6 +203,7 @@ export class GastosRepository {
         status,
         shared_from_id,
         receiver_user_id,
+        linked_purchase_id,
       ], true
     );
   }

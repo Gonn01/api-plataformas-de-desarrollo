@@ -1,4 +1,4 @@
-import { MovementType, ExpenseStatus } from "../utils/enums.js";
+import { MovementType, ExpenseStatus, ExpenseType } from "../utils/enums.js";
 import { triggerCompartidos } from "../utils/pusher.js";
 
 export class GastosService {
@@ -45,7 +45,7 @@ export class GastosService {
         return row[0];
     }
 
-    async update(id, name, amount, image_url, fixed_expense, type, category_ids, payed_quotas) {
+    async update(id, name, amount, image_url, fixed_expense, type, category_ids, payed_quotas, apply_to_linked = false) {
         const current = await this.gastosRepository.getById(id);
         if (!current.length) throw new Error("No se pudo actualizar (Gasto no existe)");
 
@@ -68,20 +68,47 @@ export class GastosService {
             await this.categoriasRepository.setCategoriasForGasto(id, category_ids);
         }
 
+        // Propagar cambios al movimiento espejo (nombre / monto / imagen / gasto fijo
+        // y categorías). El tipo del espejo se mantiene opuesto al del original.
+        const linkedId = current[0].linked_purchase_id;
+        if (apply_to_linked && linkedId) {
+            const oppositeType = String(type).toUpperCase() === ExpenseType.INGRESO
+                ? ExpenseType.EGRESO
+                : ExpenseType.INGRESO;
+            await this.gastosRepository.update(linkedId, name, amount, image_url, fixed_expense, oppositeType);
+            if (Array.isArray(category_ids)) {
+                await this.categoriasRepository.setCategoriasForGasto(linkedId, category_ids);
+            }
+        }
+
         return row;
     }
 
-    async delete(id) {
+    async delete(id, delete_linked = false) {
+        const current = await this.gastosRepository.getById(id);
+        const linkedId = current[0]?.linked_purchase_id;
+
         const row = await this.gastosRepository.delete(id);
 
         if (!row || row.length === 0) {
             throw new Error("Gasto no encontrado");
         }
 
+        if (linkedId) {
+            if (delete_linked) {
+                await this.gastosRepository.delete(linkedId);
+            } else {
+                // Rompemos el vínculo para no dejar el espejo apuntando a una fila borrada.
+                await this.gastosRepository.unlink(id);
+            }
+        }
+
         return row[0];
     }
 
-    async crearGasto(
+    // Crea una compra + su log de CREATION + un log de PAYMENT por cada cuota
+    // pagada + asocia categorías. Devuelve las rows de la compra creada.
+    async #crearCompraConLogs({
         financial_entity_id,
         name,
         amount,
@@ -90,13 +117,11 @@ export class GastosService {
         fixed_expense,
         image_url,
         type,
-        userId,
+        status,
         payed_quotas = 0,
-        category_ids = []
-    ) {
-        const entidad = await this.entidadesFinancierasRepository.getById(financial_entity_id, userId);
-        if (!entidad.length) throw new Error("Entidad financiera no encontrada o eliminada");
-
+        category_ids = [],
+        linked_purchase_id = null,
+    }) {
         const rows = await this.gastosRepository.create({
             financial_entity_id,
             name,
@@ -106,7 +131,8 @@ export class GastosService {
             fixed_expense,
             image_url,
             type,
-            status: entidad[0].linked_user_id ? ExpenseStatus.PENDING_APPROVAL : ExpenseStatus.ACTIVE,
+            status,
+            linked_purchase_id,
         });
 
         const gastoId = rows[0].id;
@@ -130,6 +156,49 @@ export class GastosService {
 
         rows[0].categories = await this.categoriasRepository.getCategoriasByGasto(gastoId);
 
+        return rows;
+    }
+
+    async crearGasto(
+        financial_entity_id,
+        name,
+        amount,
+        number_of_quotas,
+        currency_type,
+        fixed_expense,
+        image_url,
+        type,
+        userId,
+        payed_quotas = 0,
+        category_ids = [],
+        payment_entity_id = null
+    ) {
+        const entidad = await this.entidadesFinancierasRepository.getById(financial_entity_id, userId);
+        if (!entidad.length) throw new Error("Entidad financiera no encontrada o eliminada");
+
+        // "Pagar con otra entidad": validamos la entidad de pago antes de crear nada.
+        const usaEntidadPago = payment_entity_id && String(payment_entity_id) !== String(financial_entity_id);
+        if (usaEntidadPago) {
+            const entidadPago = await this.entidadesFinancierasRepository.getById(payment_entity_id, userId);
+            if (!entidadPago.length) throw new Error("Entidad de pago no encontrada o eliminada");
+        }
+
+        const rows = await this.#crearCompraConLogs({
+            financial_entity_id,
+            name,
+            amount,
+            number_of_quotas,
+            currency_type,
+            fixed_expense,
+            image_url,
+            type,
+            status: entidad[0].linked_user_id ? ExpenseStatus.PENDING_APPROVAL : ExpenseStatus.ACTIVE,
+            payed_quotas,
+            category_ids,
+        });
+
+        const gastoId = rows[0].id;
+
         // Si la entidad tiene un usuario vinculado, crear la copia pendiente para ese usuario
         if (entidad[0].linked_user_id) {
             await triggerCompartidos(entidad[0].linked_user_id, 'compartido.nuevo', { gastoId });
@@ -147,6 +216,33 @@ export class GastosService {
                 receiver_user_id: entidad[0].linked_user_id,
             });
             await this.movementsRepository.createGastoLog(sharedRows[0].id, MovementType.CREATION);
+        }
+
+        // Movimiento espejo en la entidad de pago: copia casi exacta del original
+        // (mismas cuotas, cuotas pagadas y flag de gasto fijo), con el tipo opuesto.
+        // Siempre es una creación normal (ACTIVE, sin copia compartida).
+        if (usaEntidadPago) {
+            const oppositeType = String(type).toUpperCase() === ExpenseType.INGRESO
+                ? ExpenseType.EGRESO
+                : ExpenseType.INGRESO;
+
+            const mirror = await this.#crearCompraConLogs({
+                financial_entity_id: payment_entity_id,
+                name,
+                amount,
+                number_of_quotas,
+                currency_type,
+                fixed_expense,
+                image_url,
+                type: oppositeType,
+                status: ExpenseStatus.ACTIVE,
+                payed_quotas,
+                category_ids,
+                linked_purchase_id: gastoId,
+            });
+
+            await this.gastosRepository.linkPurchases(gastoId, mirror[0].id);
+            rows[0].linked_purchase_id = mirror[0].id;
         }
 
         return rows;

@@ -14,6 +14,7 @@ export class EntidadesFinancierasService {
       const gastos = await this.gastosRepository.getGastosByEntidad(entidad.id);
       const gastosActivos = gastos.filter(g => (Number(g.payed_quotas) < Number(g.number_of_quotas) || g.fixed_expense));
       entidad.cantidad = gastosActivos.length;
+      entidad.pending_count = await this.gastosRepository.countPendingByEntidad(entidad.id);
     }
     return entidades;
   }
@@ -27,6 +28,7 @@ export class EntidadesFinancierasService {
     const gastos = await this.gastosRepository.getGastosByEntidad(id);
     const gastosActivos = gastos.filter(g => Number(g.payed_quotas) < Number(g.number_of_quotas) || g.fixed_expense);
     const gastosFinalizados = gastos.filter(g => Number(g.payed_quotas) >= Number(g.number_of_quotas) && !g.fixed_expense);
+    const gastosPendientes = await this.gastosRepository.getPendingByEntidad(id);
 
     const movements = await this.movementsRepository.getMovementsByEntidad(id);
 
@@ -39,6 +41,8 @@ export class EntidadesFinancierasService {
       linked_user_email: entity.linked_user_email ?? null,
       gastos_activos: gastosActivos,
       gastos_inactivos: gastosFinalizados,
+      gastos_pendientes: gastosPendientes,
+      pending_count: gastosPendientes.length,
       movements,
     };
   }
