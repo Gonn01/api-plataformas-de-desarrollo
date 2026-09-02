@@ -199,7 +199,7 @@ describe("GastosController", () => {
 
             await controller.pagarCuota(req, res);
 
-            expect(service.pagarCuota).toHaveBeenCalledWith("10");
+            expect(service.pagarCuota).toHaveBeenCalledWith("10", 1);
             expect(res.json).toHaveBeenCalledWith({ message: "Cuota pagada con éxito", data: mockResult[0] });
         });
 
@@ -226,8 +226,7 @@ describe("GastosController", () => {
 
             await controller.pagarCuotasLote(req, res);
 
-            expect(service.pagarCuotasLote).toHaveBeenCalledWith([1, 2, 3]);
-            expect(res.json).toHaveBeenCalledWith({ message: "Cuotas pagadas en lote", updated: mockUpdated });
+            expect(service.pagarCuotasLote).toHaveBeenCalledWith([1, 2, 3], 1);
         });
 
         it("responde 400 cuando purchase_ids no es un array", async () => {

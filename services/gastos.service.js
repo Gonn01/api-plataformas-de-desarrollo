@@ -2,11 +2,30 @@ import { MovementType, ExpenseStatus } from "../utils/enums.js";
 import { triggerCompartidos } from "../utils/pusher.js";
 
 export class GastosService {
-    constructor({ gastosRepository, movementsRepository, entidadesFinancierasRepository, categoriasRepository }) {
+    constructor({ gastosRepository, movementsRepository, entidadesFinancierasRepository, categoriasRepository, reconcileRepository }) {
         this.gastosRepository = gastosRepository;
         this.movementsRepository = movementsRepository;
         this.entidadesFinancierasRepository = entidadesFinancierasRepository;
         this.categoriasRepository = categoriasRepository;
+        this.reconcileRepository = reconcileRepository;
+    }
+
+    // "Modo hacer cuentas": no se puede registrar un pago si el usuario
+    // no tiene una sesión de cuentas abierta. Devuelve la sesión abierta.
+    async requireReconcileSession(userId) {
+        if (!this.reconcileRepository) return null;
+        if (!userId) {
+            const err = new Error("RECONCILE_REQUIRED");
+            err.code = "RECONCILE_REQUIRED";
+            throw err;
+        }
+        const session = await this.reconcileRepository.getOpenSession(userId);
+        if (!session) {
+            const err = new Error("RECONCILE_REQUIRED");
+            err.code = "RECONCILE_REQUIRED";
+            throw err;
+        }
+        return session;
     }
 
     async getById(id) {
@@ -138,7 +157,9 @@ export class GastosService {
         return await this.categoriasRepository.getCategoriasByGasto(gastoId);
     }
 
-    async pagarCuota(purchase_id) {
+    async pagarCuota(purchase_id, userId) {
+        const session = await this.requireReconcileSession(userId);
+
         const rows = await this.gastosRepository.getById(purchase_id);
 
         if (rows.length === 0) {
@@ -148,6 +169,10 @@ export class GastosService {
         await this.movementsRepository.createGastoLog(purchase_id, MovementType.PAYMENT, rows[0].amount_per_quota, new Date());
 
         const updated = await this.gastosRepository.pagarCuota(purchase_id);
+
+        if (session && this.reconcileRepository) {
+            await this.reconcileRepository.upsertItem(session.id, purchase_id, true);
+        }
 
         return updated;
     }
@@ -164,10 +189,12 @@ export class GastosService {
         return await this.gastosRepository.getById(purchase_id);
     }
 
-    async pagarCuotasLote(purchaseIds) {
+    async pagarCuotasLote(purchaseIds, userId) {
         if (!Array.isArray(purchaseIds) || purchaseIds.length === 0) {
             throw new Error("La lista de IDs de compra es inválida.");
         }
+
+        const session = await this.requireReconcileSession(userId);
 
         const paymentDate = new Date();
         const updated = [];
@@ -192,6 +219,10 @@ export class GastosService {
                 await this.movementsRepository.createGastoLog(id, MovementType.PAYMENT, gasto.amount_per_quota, paymentDate);
                 const result = await this.gastosRepository.pagarCuota(id);
                 updated.push(result[0]);
+
+                if (session && this.reconcileRepository) {
+                    await this.reconcileRepository.upsertItem(session.id, id, true);
+                }
             } catch (err) {
                 failed.push({ id, reason: err.message });
             }

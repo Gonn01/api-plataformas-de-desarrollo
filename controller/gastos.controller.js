@@ -104,8 +104,9 @@ export class GastosController {
     pagarCuota = async (req, res) => {
         try {
             const { id } = req.params;
+            const { userId } = req.session;
 
-            const updated = await this.gastosService.pagarCuota(id);
+            const updated = await this.gastosService.pagarCuota(id, userId);
 
             res.json({
                 message: "Cuota pagada con éxito",
@@ -113,6 +114,12 @@ export class GastosController {
             });
         } catch (err) {
             logRed(err);
+            if (err.code === "RECONCILE_REQUIRED") {
+                return res.status(409).json({
+                    error: 'Activá el modo "Hacer cuentas" para registrar pagos.',
+                    code: "RECONCILE_REQUIRED"
+                });
+            }
             res.status(500).json({ error: "Error en el servidor" });
         }
     }
@@ -156,6 +163,7 @@ export class GastosController {
     pagarCuotasLote = async (req, res) => {
         try {
             const { purchase_ids } = req.body;
+            const { userId } = req.session;
 
             if (!Array.isArray(purchase_ids) || purchase_ids.length === 0) {
                 return res.status(400).json({
@@ -163,7 +171,7 @@ export class GastosController {
                 });
             }
 
-            const { updated, failed } = await this.gastosService.pagarCuotasLote(purchase_ids);
+            const { updated, failed } = await this.gastosService.pagarCuotasLote(purchase_ids, userId);
 
             res.json({
                 message: "Lote procesado",
@@ -174,6 +182,12 @@ export class GastosController {
             });
         } catch (err) {
             logRed(err);
+            if (err.code === "RECONCILE_REQUIRED") {
+                return res.status(409).json({
+                    error: 'Activá el modo "Hacer cuentas" para registrar pagos.',
+                    code: "RECONCILE_REQUIRED"
+                });
+            }
             res.status(500).json({ error: "Error en el servidor" });
         }
     }
