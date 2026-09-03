@@ -288,6 +288,9 @@ export class GastosService {
         return await this.categoriasRepository.getCategoriasByGasto(gastoId);
     }
 
+    // "Modo hacer cuentas" diferido: pagar una cuota NO registra el pago en el
+    // momento. Solo marca el gasto en la sesión abierta; el pago real se efectúa
+    // al cerrar la sesión (ver ReconcileService.finishSession -> efectuarPago).
     async pagarCuota(purchase_id, userId) {
         const session = await this.requireReconcileSession(userId);
 
@@ -301,18 +304,20 @@ export class GastosService {
             throw new Error("GASTO_POSTERGADO");
         }
 
-        await this.#registrarPagoOPendiente(rows[0], userId, new Date());
+        await this.reconcileRepository.upsertItem(session.id, purchase_id, false);
 
-        // Un gasto en cuotas que quedó saldado deja de ser favorito.
-        await this.gastosRepository.clearFavoriteIfFinalized(purchase_id);
+        return rows;
+    }
 
-        const updated = await this.gastosRepository.pagarCuota(purchase_id);
-
-        if (session && this.reconcileRepository) {
-            await this.reconcileRepository.upsertItem(session.id, purchase_id, true);
-        }
-
-        return updated;
+    /**
+     * Efectúa el pago real de una cuota: registra el movimiento PAYMENT (o
+     * PENDING_PAYMENT si el gasto es compartido) y limpia el favorito si quedó
+     * saldado. Lo usa ReconcileService al cerrar la sesión de cuentas.
+     */
+    async efectuarPago(gasto, userId, paymentDate = new Date()) {
+        const result = await this.#registrarPagoOPendiente(gasto, userId, paymentDate);
+        await this.gastosRepository.clearFavoriteIfFinalized(gasto.id);
+        return result;
     }
 
     /**
@@ -370,7 +375,8 @@ export class GastosService {
 
         const session = await this.requireReconcileSession(userId);
 
-        const paymentDate = new Date();
+        // Diferido: solo marcamos cada gasto en la sesión. El pago real se
+        // efectúa al cerrarla (ReconcileService.finishSession -> efectuarPago).
         const updated = [];
         const failed = [];
 
@@ -395,14 +401,8 @@ export class GastosService {
                     continue;
                 }
 
-                await this.#registrarPagoOPendiente(gasto, userId, paymentDate);
-                await this.gastosRepository.clearFavoriteIfFinalized(id);
-                const result = await this.gastosRepository.pagarCuota(id);
-                updated.push(result[0]);
-
-                if (session && this.reconcileRepository) {
-                    await this.reconcileRepository.upsertItem(session.id, id, true);
-                }
+                await this.reconcileRepository.upsertItem(session.id, id, false);
+                updated.push(gasto);
             } catch (err) {
                 failed.push({ id, reason: err.message });
             }

@@ -1,3 +1,5 @@
+import { logRed } from "../utils/logs_custom.js";
+
 export class ReconcileError extends Error {
     constructor(code, message) {
         super(message ?? code);
@@ -44,8 +46,9 @@ function buildTotals(items) {
 }
 
 export class ReconcileService {
-    constructor({ reconcileRepository }) {
+    constructor({ reconcileRepository, gastosService }) {
         this.reconcileRepository = reconcileRepository;
+        this.gastosService = gastosService;
     }
 
     async getSession(userId) {
@@ -87,6 +90,10 @@ export class ReconcileService {
     async finishSession(userId) {
         const session = await this.reconcileRepository.getOpenSession(userId);
         if (!session) throw new ReconcileError("NO_OPEN_SESSION", "No hay una sesión de cuentas abierta");
+
+        // Pago diferido: marcar un gasto durante la sesión no lo paga. Recién al
+        // cerrar la sesión se registran los pagos reales de todo lo marcado.
+        await this.#effectMarkedPayments(userId, session.id);
 
         const src = await this.reconcileRepository.getSnapshotSourceItems(session.id);
         const items = src.map((r) => ({
@@ -146,5 +153,44 @@ export class ReconcileService {
         const session = await this.reconcileRepository.getOpenSession(userId);
         if (!session) throw new ReconcileError("RECONCILE_REQUIRED", "No hay una sesión de cuentas abierta");
         return session;
+    }
+
+    /**
+     * Efectúa el pago real de cada gasto marcado en la sesión. Los gastos que
+     * ya no se pueden pagar (borrados, postergados o con todas las cuotas pagas)
+     * se sacan de la sesión para que no ensucien el snapshot.
+     */
+    async #effectMarkedPayments(userId, sessionId) {
+        if (!this.gastosService) return;
+
+        const items = await this.reconcileRepository.getSessionItems(sessionId);
+        const paymentDate = new Date();
+
+        for (const it of items) {
+            let gasto;
+            try {
+                gasto = await this.gastosService.getById(it.purchase_id);
+            } catch {
+                await this.reconcileRepository.removeItem(sessionId, it.purchase_id);
+                continue;
+            }
+
+            const fullyPaid =
+                !gasto.fixed_expense &&
+                Number(gasto.payed_quotas) >= Number(gasto.number_of_quotas);
+
+            if (gasto.is_postponed || fullyPaid) {
+                await this.reconcileRepository.removeItem(sessionId, it.purchase_id);
+                continue;
+            }
+
+            try {
+                await this.gastosService.efectuarPago(gasto, userId, paymentDate);
+                // Releer quota_number ahora que el pago quedó registrado.
+                await this.reconcileRepository.upsertItem(sessionId, it.purchase_id, it.auto);
+            } catch (err) {
+                logRed(`[reconcile finish] no se pudo pagar la compra ${it.purchase_id}: ${err.message}`);
+            }
+        }
     }
 }
