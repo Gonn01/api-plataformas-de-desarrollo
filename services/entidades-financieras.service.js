@@ -36,6 +36,7 @@ export class EntidadesFinancierasService {
       id: entity.id,
       name: entity.name,
       created_at: entity.created_at,
+      is_favorite: entity.is_favorite,
       linked_user_id: entity.linked_user_id,
       linked_user_name: entity.linked_user_name ?? null,
       linked_user_email: entity.linked_user_email ?? null,
@@ -67,6 +68,14 @@ export class EntidadesFinancierasService {
 
     const [row] = await this.entidadesFinancierasRepository.update(id, name, userId);
 
+    return row;
+  }
+
+  async marcarFavorito(id, userId, favorite) {
+    const currentRows = await this.entidadesFinancierasRepository.getById(id, userId);
+    if (currentRows.length === 0) throw new Error("Entidad no encontrada");
+
+    const [row] = await this.entidadesFinancierasRepository.setFavorite(id, userId, Boolean(favorite));
     return row;
   }
 

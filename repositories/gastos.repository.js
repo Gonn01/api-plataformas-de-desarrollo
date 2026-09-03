@@ -31,6 +31,12 @@ export async function ensureGastosSchema() {
     ["purchases.is_postponed", `
       ALTER TABLE purchases ADD COLUMN IF NOT EXISTS is_postponed BOOLEAN NOT NULL DEFAULT false
     `],
+    ["purchases.is_favorite", `
+      ALTER TABLE purchases ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN NOT NULL DEFAULT false
+    `],
+    ["financial_entities.is_favorite", `
+      ALTER TABLE financial_entities ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN NOT NULL DEFAULT false
+    `],
   ];
 
   for (const [name, sql] of steps) {
@@ -274,6 +280,31 @@ export class GastosRepository {
        WHERE p.id = $1 AND p.deleted = false
        RETURNING p.*, ${CALCULATED_FIELDS}`,
       [id, value], true
+    );
+  }
+
+  async setFavorite(id, value) {
+    return await executeQuery(
+      `UPDATE purchases p
+       SET is_favorite = $2
+       WHERE p.id = $1 AND p.deleted = false
+       RETURNING p.*, ${CALCULATED_FIELDS}`,
+      [id, value], true
+    );
+  }
+
+  // Un gasto en cuotas que quedó totalmente pagado deja de ser favorito.
+  async clearFavoriteIfFinalized(purchaseId) {
+    return await executeQuery(
+      `UPDATE purchases
+       SET is_favorite = false
+       WHERE id = $1
+         AND is_favorite = true
+         AND fixed_expense = false
+         AND number_of_quotas > 0
+         AND (SELECT COUNT(*) FROM purchases_movements
+              WHERE purchase_id = $1 AND movement_type = 'PAYMENT') >= number_of_quotas`,
+      [purchaseId], true
     );
   }
 

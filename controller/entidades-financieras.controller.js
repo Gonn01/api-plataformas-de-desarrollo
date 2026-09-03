@@ -81,6 +81,25 @@ export class EntidadesFinancierasController {
         }
     }
 
+    favorito = async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { userId } = req.session;
+            const favorite = req.body?.favorite ?? true;
+
+            const response = await this.entidadesFinancierasService.marcarFavorito(id, userId, favorite);
+
+            res.json({
+                message: "Entidad financiera actualizada con éxito",
+                data: response
+            });
+        } catch (err) {
+            logRed(err);
+            if (err.message === "Entidad no encontrada") return res.status(404).json({ error: err.message });
+            res.status(500).json({ error: "Error en el servidor" });
+        }
+    }
+
     eliminar = async (req, res) => {
         try {
             const { id } = req.params;

@@ -269,6 +269,20 @@ export class GastosService {
         return updated;
     }
 
+    async marcarFavorito(id, userId, favorite) {
+        const current = await this.gastosRepository.getById(id);
+        if (!current.length) throw new Error("Gasto no encontrado");
+
+        const entidad = await this.entidadesFinancierasRepository.getById(
+            current[0].financial_entity_id,
+            userId,
+        );
+        if (!entidad.length) throw new Error("No autorizado");
+
+        const [updated] = await this.gastosRepository.setFavorite(id, Boolean(favorite));
+        return updated;
+    }
+
     async actualizarCategorias(gastoId, categoryIds) {
         await this.categoriasRepository.setCategoriasForGasto(gastoId, categoryIds);
         return await this.categoriasRepository.getCategoriasByGasto(gastoId);
@@ -288,6 +302,9 @@ export class GastosService {
         }
 
         await this.#registrarPagoOPendiente(rows[0], userId, new Date());
+
+        // Un gasto en cuotas que quedó saldado deja de ser favorito.
+        await this.gastosRepository.clearFavoriteIfFinalized(purchase_id);
 
         const updated = await this.gastosRepository.pagarCuota(purchase_id);
 
@@ -379,6 +396,7 @@ export class GastosService {
                 }
 
                 await this.#registrarPagoOPendiente(gasto, userId, paymentDate);
+                await this.gastosRepository.clearFavoriteIfFinalized(id);
                 const result = await this.gastosRepository.pagarCuota(id);
                 updated.push(result[0]);
 

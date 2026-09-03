@@ -6,6 +6,8 @@ export class DashboardRepository {
       SELECT
               e.id,
               e.name,
+              e.is_favorite,
+              e.created_at,
               (SELECT COUNT(*) FROM purchases pp
                  WHERE pp.financial_entity_id = e.id
                    AND pp.deleted = false
@@ -23,6 +25,7 @@ export class DashboardRepository {
                   'type', g.type,
                   'fixed_expense', g.fixed_expense,
                   'is_postponed', g.is_postponed,
+                  'is_favorite', g.is_favorite,
                   'created_at', g.created_at,
                   'last_payment_date', (SELECT MAX(payment_date) FROM purchases_movements WHERE purchase_id = g.id AND movement_type = 'PAYMENT'),
                   'categories', COALESCE(
@@ -33,6 +36,7 @@ export class DashboardRepository {
                     '[]'::json
                   )
                 )
+                ORDER BY g.is_favorite DESC, g.created_at DESC
               ) FILTER (WHERE g.id IS NOT NULL),
               '[]'::json
             ) AS gastos
@@ -46,7 +50,7 @@ export class DashboardRepository {
               AND g.status = 'ACTIVE'
             WHERE e.user_id = $1
               AND e.deleted = false
-            GROUP BY e.id ORDER BY e.created_at DESC;
+            GROUP BY e.id ORDER BY e.is_favorite DESC, e.created_at DESC;
     `, [userId], true);
   }
 }

@@ -42,6 +42,7 @@ export class CompartidosService {
         await this.#assertConfirmerDePago(pend, userId);
 
         const [confirmed] = await this.movementsRepository.confirmPendingPayment(movementId);
+        await this.gastosRepository.clearFavoriteIfFinalized(pend.purchase_id);
         const [actor] = await this.gastosRepository.getUserName(userId);
         await triggerCompartidos(pend.created_by_user_id, 'pago.confirmado', {
             purchaseId: pend.purchase_id,

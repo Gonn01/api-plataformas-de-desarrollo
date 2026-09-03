@@ -126,6 +126,22 @@ export class GastosController {
         }
     }
 
+    favorito = async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { userId } = req.session;
+            const favorite = req.body?.favorite ?? true;
+
+            const data = await this.gastosService.marcarFavorito(id, userId, favorite);
+            res.json({ message: "Gasto actualizado", data });
+        } catch (err) {
+            logRed(err);
+            if (err.message === "Gasto no encontrado") return res.status(404).json({ error: err.message });
+            if (err.message === "No autorizado") return res.status(403).json({ error: err.message });
+            res.status(500).json({ error: "Error en el servidor" });
+        }
+    }
+
     pagarCuota = async (req, res) => {
         try {
             const { id } = req.params;
