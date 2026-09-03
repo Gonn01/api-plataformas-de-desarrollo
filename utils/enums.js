@@ -1,8 +1,9 @@
 export const MovementType = Object.freeze({
-    CREATION: 'CREATION',
-    PAYMENT:  'PAYMENT',
-    REFUND:   'REFUND',
-    DELETE:   'DELETE',
+    CREATION:        'CREATION',
+    PAYMENT:         'PAYMENT',
+    PENDING_PAYMENT: 'PENDING_PAYMENT',
+    REFUND:          'REFUND',
+    DELETE:          'DELETE',
 });
 
 export const Currency = Object.freeze({

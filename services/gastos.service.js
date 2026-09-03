@@ -262,7 +262,7 @@ export class GastosService {
             throw new Error("Gasto no encontrado");
         }
 
-        await this.movementsRepository.createGastoLog(purchase_id, MovementType.PAYMENT, rows[0].amount_per_quota, new Date());
+        await this.#registrarPagoOPendiente(rows[0], userId, new Date());
 
         const updated = await this.gastosRepository.pagarCuota(purchase_id);
 
@@ -271,6 +271,42 @@ export class GastosService {
         }
 
         return updated;
+    }
+
+    /**
+     * Registra el pago de una cuota. Si el gasto está compartido con otro usuario
+     * (par original <-> copia, ambos activos), el pago queda como PENDING_PAYMENT
+     * hasta que la otra persona lo confirme; si no, se aplica de una.
+     */
+    async #registrarPagoOPendiente(gasto, userId, paymentDate) {
+        const [sibling] = await this.gastosRepository.getSharedSibling(gasto.id);
+
+        const esCompartido =
+            sibling &&
+            sibling.counterparty_user_id &&
+            String(sibling.counterparty_user_id) !== String(userId);
+
+        if (esCompartido) {
+            const yaCubierto =
+                !gasto.fixed_expense &&
+                (Number(gasto.payed_quotas) || 0) + (Number(gasto.pending_quotas) || 0) >=
+                    Number(gasto.number_of_quotas);
+
+            if (yaCubierto) return { pending: true, skipped: true };
+
+            await this.movementsRepository.createGastoLog(
+                gasto.id, MovementType.PENDING_PAYMENT, gasto.amount_per_quota, paymentDate, userId,
+            );
+            await triggerCompartidos(sibling.counterparty_user_id, 'pago.pendiente', {
+                purchaseId: gasto.id,
+            });
+            return { pending: true };
+        }
+
+        await this.movementsRepository.createGastoLog(
+            gasto.id, MovementType.PAYMENT, gasto.amount_per_quota, paymentDate,
+        );
+        return { pending: false };
     }
 
     async refundCuota(purchase_id) {
@@ -312,7 +348,7 @@ export class GastosService {
                     continue;
                 }
 
-                await this.movementsRepository.createGastoLog(id, MovementType.PAYMENT, gasto.amount_per_quota, paymentDate);
+                await this.#registrarPagoOPendiente(gasto, userId, paymentDate);
                 const result = await this.gastosRepository.pagarCuota(id);
                 updated.push(result[0]);
 

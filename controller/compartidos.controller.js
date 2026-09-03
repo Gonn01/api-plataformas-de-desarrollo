@@ -71,4 +71,34 @@ export class CompartidosController {
             res.status(500).json({ error: "Error en el servidor" });
         }
     }
+
+    confirmarPago = async (req, res) => {
+        try {
+            const { movementId } = req.params;
+            const { userId } = req.session;
+
+            const data = await this.compartidosService.confirmarPago(movementId, userId);
+            res.json({ message: "Pago confirmado", data });
+        } catch (err) {
+            logRed(err);
+            if (err.message === "Pago pendiente no encontrado") return res.status(404).json({ error: err.message });
+            if (err.message === "No autorizado") return res.status(403).json({ error: err.message });
+            res.status(500).json({ error: "Error en el servidor" });
+        }
+    }
+
+    rechazarPago = async (req, res) => {
+        try {
+            const { movementId } = req.params;
+            const { userId } = req.session;
+
+            const data = await this.compartidosService.rechazarPago(movementId, userId);
+            res.json({ message: "Pago rechazado", data });
+        } catch (err) {
+            logRed(err);
+            if (err.message === "Pago pendiente no encontrado") return res.status(404).json({ error: err.message });
+            if (err.message === "No autorizado") return res.status(403).json({ error: err.message });
+            res.status(500).json({ error: "Error en el servidor" });
+        }
+    }
 }

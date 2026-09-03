@@ -4,6 +4,7 @@ import { logRed, logGreen } from "../utils/logs_custom.js";
 
 const CALCULATED_FIELDS = `
   (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT')::int AS payed_quotas,
+  (SELECT COUNT(*) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PENDING_PAYMENT')::int AS pending_quotas,
   CASE WHEN p.number_of_quotas > 0 THEN p.amount::numeric / p.number_of_quotas ELSE p.amount END AS amount_per_quota,
   (SELECT payment_date FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT' ORDER BY payment_date ASC NULLS LAST LIMIT 1) AS first_quota_date,
   (SELECT MAX(payment_date) FROM purchases_movements WHERE purchase_id = p.id AND movement_type = 'PAYMENT') AS last_payment_date,
@@ -24,6 +25,9 @@ export async function ensureGastosSchema() {
     ["purchases.linked_purchase_id", `
       ALTER TABLE purchases ADD COLUMN IF NOT EXISTS linked_purchase_id INTEGER
     `],
+    ["purchases_movements.created_by_user_id", `
+      ALTER TABLE purchases_movements ADD COLUMN IF NOT EXISTS created_by_user_id INTEGER
+    `],
   ];
 
   for (const [name, sql] of steps) {
@@ -34,7 +38,50 @@ export async function ensureGastosSchema() {
       throw err;
     }
   }
+
+  // "purchases_movements.movement_type" es un enum de Postgres: hay que registrar
+  // el valor PENDING_PAYMENT antes de poder insertarlo.
+  try {
+    await ensureMovementTypeValue("PENDING_PAYMENT");
+  } catch (err) {
+    logRed(`[gastos schema] falló "movement_type += PENDING_PAYMENT": ${err.message}`);
+    throw err;
+  }
+
   logGreen("[gastos schema] OK");
+}
+
+async function ensureMovementTypeValue(value) {
+  const typeRows = await executeQuery(`
+    SELECT t.typname, t.typtype
+    FROM pg_attribute a
+    JOIN pg_class c ON c.oid = a.attrelid
+    JOIN pg_type  t ON t.oid = a.atttypid
+    WHERE c.relname = 'purchases_movements'
+      AND a.attname = 'movement_type'
+      AND a.attnum > 0
+      AND NOT a.attisdropped
+    LIMIT 1
+  `);
+
+  const meta = typeRows[0];
+  if (!meta || meta.typtype !== "e") return; // no es enum: nada que asegurar
+
+  const exists = await executeQuery(
+    `
+    SELECT 1
+    FROM pg_enum e
+    JOIN pg_type t ON t.oid = e.enumtypid
+    WHERE t.typname = $1 AND e.enumlabel = $2
+    LIMIT 1
+  `,
+    [meta.typname, value]
+  );
+
+  if (exists.length) return;
+
+  // Sin IF NOT EXISTS para compatibilidad con Postgres < 12; ya validamos arriba.
+  await executeQuery(`ALTER TYPE "${meta.typname}" ADD VALUE '${value}'`);
 }
 
 export class GastosRepository {
@@ -236,10 +283,102 @@ export class GastosRepository {
     );
   }
 
+  async getApprovalNotificationData(copyId) {
+    return await executeQuery(
+      `SELECT
+          fe_sender.user_id AS sender_user_id,
+          fe_sender.id      AS sender_entity_id,
+          original.name     AS gasto_name,
+          receiver.name     AS receiver_name
+       FROM purchases copy
+       JOIN purchases original ON original.id = copy.shared_from_id AND original.deleted = false
+       JOIN financial_entities fe_sender ON fe_sender.id = original.financial_entity_id
+       JOIN users receiver ON receiver.id = copy.receiver_user_id
+       WHERE copy.id = $1 AND copy.deleted = false
+       LIMIT 1`,
+      [copyId], true
+    );
+  }
+
+  async getUserName(userId) {
+    return await executeQuery(
+      `SELECT name FROM users WHERE id = $1 LIMIT 1`,
+      [userId], true
+    );
+  }
+
   async getSharedCopyByOriginalId(originalId) {
     return await executeQuery(
       `SELECT * FROM purchases WHERE shared_from_id = $1 AND deleted = false LIMIT 1`,
       [originalId], true
+    );
+  }
+
+  /**
+   * Dada una compra que forma parte de un par compartido (original <-> copia),
+   * devuelve el id de la compra hermana ACTIVA y el id del usuario del otro lado
+   * (el que debe confirmar los pagos). Devuelve [] si la compra no está compartida
+   * o la hermana no está activa.
+   */
+  async getSharedSibling(purchaseId) {
+    return await executeQuery(
+      `SELECT
+          sib.id AS sibling_id,
+          CASE WHEN p.shared_from_id IS NULL THEN sib.receiver_user_id
+               ELSE fe.user_id END AS counterparty_user_id
+       FROM purchases p
+       JOIN purchases sib
+         ON ((p.shared_from_id IS NULL AND sib.shared_from_id = p.id)
+          OR (p.shared_from_id IS NOT NULL AND sib.id = p.shared_from_id))
+        AND sib.deleted = false
+        AND sib.status = 'ACTIVE'
+       LEFT JOIN financial_entities fe ON fe.id = sib.financial_entity_id
+       WHERE p.id = $1 AND p.deleted = false
+       LIMIT 1`,
+      [purchaseId], true
+    );
+  }
+
+  /**
+   * Pagos pendientes de confirmación relacionados con el usuario.
+   *  - porConfirmar: los registró la otra persona y este usuario debe confirmarlos.
+   *  - esperando: los registró este usuario y espera confirmación del otro.
+   */
+  async getPagosCompartidos(userId) {
+    return await executeQuery(
+      `WITH pend AS (
+          SELECT
+             m.id AS movement_id,
+             m.amount,
+             m.payment_date,
+             m.created_at,
+             m.purchase_id,
+             m.created_by_user_id,
+             p.name AS gasto_name,
+             p.currency_type,
+             p.number_of_quotas,
+             (SELECT COUNT(*) FROM purchases_movements pm
+               WHERE pm.purchase_id = p.id AND pm.movement_type = 'PAYMENT')::int AS payed_quotas,
+             CASE WHEN p.shared_from_id IS NULL THEN sib.receiver_user_id
+                  ELSE fe.user_id END AS counterparty_user_id
+          FROM purchases_movements m
+          JOIN purchases p ON p.id = m.purchase_id AND p.deleted = false
+          JOIN purchases sib
+            ON ((p.shared_from_id IS NULL AND sib.shared_from_id = p.id)
+             OR (p.shared_from_id IS NOT NULL AND sib.id = p.shared_from_id))
+           AND sib.deleted = false
+          LEFT JOIN financial_entities fe ON fe.id = sib.financial_entity_id
+          WHERE m.movement_type = 'PENDING_PAYMENT'
+       )
+       SELECT pend.*,
+              registrar.name AS registrar_name,
+              counterparty.name AS counterparty_name
+       FROM pend
+       JOIN users registrar ON registrar.id = pend.created_by_user_id
+       JOIN users counterparty ON counterparty.id = pend.counterparty_user_id
+       WHERE pend.created_by_user_id = $1 OR pend.counterparty_user_id = $1
+       ORDER BY pend.created_at DESC`,
+      [userId], true
     );
   }
 

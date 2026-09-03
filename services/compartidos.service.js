@@ -9,11 +9,62 @@ export class CompartidosService {
     }
 
     async getCompartidos(userId) {
-        const [recibidos, emitidos] = await Promise.all([
+        const [recibidos, emitidos, pagosRows] = await Promise.all([
             this.gastosRepository.getCompartidosRecibidos(userId),
             this.gastosRepository.getCompartidosEmitidos(userId),
+            this.gastosRepository.getPagosCompartidos(userId),
         ]);
-        return { recibidos, emitidos };
+
+        const porConfirmar = [];
+        const esperando = [];
+        for (const r of pagosRows) {
+            if (String(r.created_by_user_id) === String(userId)) esperando.push(r);
+            else porConfirmar.push(r);
+        }
+
+        return { recibidos, emitidos, pagos: { porConfirmar, esperando } };
+    }
+
+    async #assertConfirmerDePago(pend, userId) {
+        if (String(pend.created_by_user_id) === String(userId)) {
+            throw new Error("No autorizado");
+        }
+        const [sibling] = await this.gastosRepository.getSharedSibling(pend.purchase_id);
+        if (!sibling || String(sibling.counterparty_user_id) !== String(userId)) {
+            throw new Error("No autorizado");
+        }
+    }
+
+    async confirmarPago(movementId, userId) {
+        const [pend] = await this.movementsRepository.getPendingPaymentById(movementId);
+        if (!pend) throw new Error("Pago pendiente no encontrado");
+
+        await this.#assertConfirmerDePago(pend, userId);
+
+        const [confirmed] = await this.movementsRepository.confirmPendingPayment(movementId);
+        const [actor] = await this.gastosRepository.getUserName(userId);
+        await triggerCompartidos(pend.created_by_user_id, 'pago.confirmado', {
+            purchaseId: pend.purchase_id,
+            actorName: actor?.name ?? null,
+        });
+
+        return confirmed;
+    }
+
+    async rechazarPago(movementId, userId) {
+        const [pend] = await this.movementsRepository.getPendingPaymentById(movementId);
+        if (!pend) throw new Error("Pago pendiente no encontrado");
+
+        await this.#assertConfirmerDePago(pend, userId);
+
+        const [deleted] = await this.movementsRepository.deletePendingPayment(movementId);
+        const [actor] = await this.gastosRepository.getUserName(userId);
+        await triggerCompartidos(pend.created_by_user_id, 'pago.rechazado', {
+            purchaseId: pend.purchase_id,
+            actorName: actor?.name ?? null,
+        });
+
+        return deleted;
     }
 
     async aprobar(gastoId, userId, financialEntityId, newEntityName) {
@@ -42,15 +93,22 @@ export class CompartidosService {
         const entidad = await this.entidadesFinancierasRepository.getById(entityId, userId);
         if (!entidad.length) throw new Error("Entidad no encontrada o no pertenece al usuario");
 
-        const [[updated], senderRows] = await Promise.all([
+        const [[updated], notifRows] = await Promise.all([
             this.gastosRepository.aprobarGasto(gastoId, entityId),
-            this.gastosRepository.getEntityOwnerByPurchaseId(gasto.shared_from_id),
+            this.gastosRepository.getApprovalNotificationData(gastoId),
         ]);
+
+        const notif = notifRows[0];
 
         await Promise.all([
             this.gastosRepository.updateStatus(gasto.shared_from_id, ExpenseStatus.ACTIVE),
             this.movementsRepository.createGastoLog(gastoId, MovementType.CREATION),
-            senderRows.length && triggerCompartidos(senderRows[0].user_id, 'compartido.aprobado', { gastoId }),
+            notif && triggerCompartidos(notif.sender_user_id, 'compartido.aprobado', {
+                gastoId,
+                entityId: notif.sender_entity_id,
+                receiverName: notif.receiver_name,
+                gastoName: notif.gasto_name,
+            }),
         ]);
 
         return updated;

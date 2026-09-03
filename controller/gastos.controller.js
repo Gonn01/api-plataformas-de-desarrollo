@@ -198,4 +198,5 @@ export class GastosController {
             res.status(500).json({ error: "Error en el servidor" });
         }
     }
+
 }

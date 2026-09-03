@@ -5,6 +5,8 @@ const router = Router();
 const controller = makeCompartidosController();
 
 router.get("/", controller.getCompartidos);
+router.post("/pagos/:movementId/confirmar", controller.confirmarPago);
+router.post("/pagos/:movementId/rechazar", controller.rechazarPago);
 router.post("/:id/aprobar", controller.aprobar);
 router.post("/:id/rechazar", controller.rechazar);
 router.post("/:id/reintentar", controller.reintentar);

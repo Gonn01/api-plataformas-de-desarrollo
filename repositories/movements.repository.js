@@ -51,12 +51,40 @@ export class MovementsRepository {
         );
     }
 
-    async createGastoLog(gastoId, movementType, amount = null, paymentDate = null) {
+    async createGastoLog(gastoId, movementType, amount = null, paymentDate = null, createdByUserId = null) {
         return await executeQuery(
-            `INSERT INTO purchases_movements (created_at, purchase_id, movement_type, amount, payment_date)
-             VALUES (NOW(), $1, $2, $3, $4)
+            `INSERT INTO purchases_movements (created_at, purchase_id, movement_type, amount, payment_date, created_by_user_id)
+             VALUES (NOW(), $1, $2, $3, $4, $5)
              RETURNING *`,
-            [gastoId, movementType, amount, paymentDate], true
+            [gastoId, movementType, amount, paymentDate, createdByUserId], true
+        );
+    }
+
+    async getPendingPaymentById(movementId) {
+        return await executeQuery(
+            `SELECT id, purchase_id, movement_type, amount, payment_date, created_by_user_id
+             FROM purchases_movements
+             WHERE id = $1 AND movement_type = 'PENDING_PAYMENT'`,
+            [movementId], true
+        );
+    }
+
+    async confirmPendingPayment(movementId) {
+        return await executeQuery(
+            `UPDATE purchases_movements
+             SET movement_type = 'PAYMENT'
+             WHERE id = $1 AND movement_type = 'PENDING_PAYMENT'
+             RETURNING *`,
+            [movementId], true
+        );
+    }
+
+    async deletePendingPayment(movementId) {
+        return await executeQuery(
+            `DELETE FROM purchases_movements
+             WHERE id = $1 AND movement_type = 'PENDING_PAYMENT'
+             RETURNING *`,
+            [movementId], true
         );
     }
 }
