@@ -28,6 +28,9 @@ export async function ensureGastosSchema() {
     ["purchases_movements.created_by_user_id", `
       ALTER TABLE purchases_movements ADD COLUMN IF NOT EXISTS created_by_user_id INTEGER
     `],
+    ["purchases.is_postponed", `
+      ALTER TABLE purchases ADD COLUMN IF NOT EXISTS is_postponed BOOLEAN NOT NULL DEFAULT false
+    `],
   ];
 
   for (const [name, sql] of steps) {
@@ -261,6 +264,19 @@ export class GastosRepository {
       [id, status], true
     );
   }
+
+  // Marca / desmarca un gasto como "postergado" (fuera del alcance de la
+  // sesión de cuentas actual o de la próxima que se abra).
+  async setPostponed(id, value) {
+    return await executeQuery(
+      `UPDATE purchases p
+       SET is_postponed = $2
+       WHERE p.id = $1 AND p.deleted = false
+       RETURNING p.*, ${CALCULATED_FIELDS}`,
+      [id, value], true
+    );
+  }
+
 
   async aprobarGasto(id, financialEntityId) {
     return await executeQuery(

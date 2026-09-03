@@ -22,6 +22,7 @@ export class DashboardRepository {
                   'currency_type', g.currency_type,
                   'type', g.type,
                   'fixed_expense', g.fixed_expense,
+                  'is_postponed', g.is_postponed,
                   'created_at', g.created_at,
                   'last_payment_date', (SELECT MAX(payment_date) FROM purchases_movements WHERE purchase_id = g.id AND movement_type = 'PAYMENT'),
                   'categories', COALESCE(

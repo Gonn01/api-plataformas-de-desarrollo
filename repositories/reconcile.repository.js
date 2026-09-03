@@ -176,6 +176,21 @@ export class ReconcileRepository {
         );
     }
 
+    // Al cerrar una sesión, los gastos postergados del usuario vuelven a estar
+    // disponibles para la próxima.
+    async releasePostponedForUser(userId) {
+        return await executeQuery(
+            `UPDATE purchases p
+             SET is_postponed = false
+             FROM financial_entities fe
+             WHERE p.financial_entity_id = fe.id
+               AND fe.user_id = $1
+               AND p.is_postponed = true
+               AND p.deleted = false`,
+            [userId],
+        );
+    }
+
     async deleteSession(sessionId) {
         return await executeQuery(
             `DELETE FROM reconcile_sessions WHERE id = $1`,

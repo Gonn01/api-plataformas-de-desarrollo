@@ -171,7 +171,8 @@ export class GastosService {
         userId,
         payed_quotas = 0,
         category_ids = [],
-        payment_entity_id = null
+        payment_entity_id = null,
+        postponed = false
     ) {
         const entidad = await this.entidadesFinancierasRepository.getById(financial_entity_id, userId);
         if (!entidad.length) throw new Error("Entidad financiera no encontrada o eliminada");
@@ -245,7 +246,27 @@ export class GastosService {
             rows[0].linked_purchase_id = mirror[0].id;
         }
 
+        // Postergar: el gasto no entra en la sesión de cuentas actual/próxima.
+        if (postponed) {
+            await this.gastosRepository.setPostponed(gastoId, true);
+            rows[0].is_postponed = true;
+        }
+
         return rows;
+    }
+
+    async postergarGasto(id, userId, postponed) {
+        const current = await this.gastosRepository.getById(id);
+        if (!current.length) throw new Error("Gasto no encontrado");
+
+        const entidad = await this.entidadesFinancierasRepository.getById(
+            current[0].financial_entity_id,
+            userId,
+        );
+        if (!entidad.length) throw new Error("No autorizado");
+
+        const [updated] = await this.gastosRepository.setPostponed(id, Boolean(postponed));
+        return updated;
     }
 
     async actualizarCategorias(gastoId, categoryIds) {
@@ -260,6 +281,10 @@ export class GastosService {
 
         if (rows.length === 0) {
             throw new Error("Gasto no encontrado");
+        }
+
+        if (rows[0].is_postponed) {
+            throw new Error("GASTO_POSTERGADO");
         }
 
         await this.#registrarPagoOPendiente(rows[0], userId, new Date());
@@ -342,6 +367,11 @@ export class GastosService {
                 }
 
                 const gasto = rows[0];
+
+                if (gasto.is_postponed) {
+                    failed.push({ id, reason: "Gasto postergado para la próxima sesión" });
+                    continue;
+                }
 
                 if (!gasto.fixed_expense && gasto.payed_quotas >= gasto.number_of_quotas) {
                     failed.push({ id, reason: "Todas las cuotas ya están pagas" });

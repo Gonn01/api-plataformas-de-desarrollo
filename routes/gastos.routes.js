@@ -10,6 +10,7 @@ router.get('/:id', controller.getById);
 router.put('/:id', controller.update);
 router.delete('/:id', controller.delete);
 router.put('/:id/categorias', controller.actualizarCategorias);
+router.put('/:id/postergar', controller.postergar);
 router.post("/:id/pagar-cuota", controller.pagarCuota);
 router.post("/:id/refund-cuota", controller.refundCuota);
 router.post("/pagar-lote", controller.pagarCuotasLote);

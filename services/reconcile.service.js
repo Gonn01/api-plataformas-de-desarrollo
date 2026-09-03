@@ -119,6 +119,8 @@ export class ReconcileService {
         });
 
         await this.reconcileRepository.finishSession(session.id);
+        // Los gastos postergados vuelven a estar disponibles para la próxima sesión.
+        await this.reconcileRepository.releasePostponedForUser(userId);
         return normalizeSnapshot(snapshot);
     }
 

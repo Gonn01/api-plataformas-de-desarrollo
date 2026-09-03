@@ -20,6 +20,7 @@ export class GastosController {
                 payed_quotas,
                 category_ids,
                 payment_entity_id,
+                postponed,
             } = req.body;
             const { userId } = req.session;
 
@@ -39,7 +40,8 @@ export class GastosController {
                 userId,
                 payed_quotas,
                 category_ids,
-                payment_entity_id
+                payment_entity_id,
+                postponed
             );
             res.status(201).json({
                 message: "Gasto creado con éxito",
@@ -108,6 +110,22 @@ export class GastosController {
         }
     }
 
+    postergar = async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { userId } = req.session;
+            const postponed = req.body?.postponed ?? true;
+
+            const data = await this.gastosService.postergarGasto(id, userId, postponed);
+            res.json({ message: "Gasto actualizado", data });
+        } catch (err) {
+            logRed(err);
+            if (err.message === "Gasto no encontrado") return res.status(404).json({ error: err.message });
+            if (err.message === "No autorizado") return res.status(403).json({ error: err.message });
+            res.status(500).json({ error: "Error en el servidor" });
+        }
+    }
+
     pagarCuota = async (req, res) => {
         try {
             const { id } = req.params;
@@ -125,6 +143,12 @@ export class GastosController {
                 return res.status(409).json({
                     error: 'Activá el modo "Hacer cuentas" para registrar pagos.',
                     code: "RECONCILE_REQUIRED"
+                });
+            }
+            if (err.message === "GASTO_POSTERGADO") {
+                return res.status(409).json({
+                    error: "El gasto está postergado para la próxima sesión de cuentas.",
+                    code: "GASTO_POSTERGADO"
                 });
             }
             res.status(500).json({ error: "Error en el servidor" });
