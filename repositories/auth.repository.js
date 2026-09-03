@@ -24,4 +24,15 @@ export class AuthRepository {
         );
     }
 
+    async linkFirebaseId(userId, firebaseId, avatar) {
+        return await executeQuery(
+            `UPDATE users
+             SET firebase_user_id = $1,
+                 avatar = COALESCE(avatar, $2)
+             WHERE id = $3
+             RETURNING id, name, email`,
+            [firebaseId, avatar ?? null, userId], true
+        );
+    }
+
 }

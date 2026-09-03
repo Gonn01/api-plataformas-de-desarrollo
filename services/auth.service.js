@@ -38,11 +38,20 @@ export class AuthService {
 
         let user;
 
-        if (existing.length === 0) {
-            const inserted = await this.authRepository.createUser(name, email, null, firebaseId, avatar);
-            user = inserted[0];
-        } else {
+        if (existing.length > 0) {
             user = existing[0];
+        } else {
+            // No hay cuenta con este firebaseId. Antes de crear una nueva, buscamos
+            // por email para no duplicar una cuenta creada con credenciales.
+            const byEmail = email ? await this.authRepository.findUserByEmail(email) : [];
+
+            if (byEmail.length > 0) {
+                const linked = await this.authRepository.linkFirebaseId(byEmail[0].id, firebaseId, avatar);
+                user = linked[0];
+            } else {
+                const inserted = await this.authRepository.createUser(name, email, null, firebaseId, avatar);
+                user = inserted[0];
+            }
         }
 
         const token = jwt.sign(
