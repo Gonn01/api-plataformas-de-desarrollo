@@ -101,7 +101,7 @@ export class EntidadesFinancierasService {
     if (!users.length) throw new Error("No existe un usuario registrado con ese email");
 
     const linkedUser = users[0];
-    if (linkedUser.id === parseInt(userId)) throw new Error("No podés vincular tu propia cuenta");
+    if (Number(linkedUser.id) === Number(userId)) throw new Error("No podés vincular tu propia cuenta");
 
     const existing = await this.entidadesFinancierasRepository.findByLinkedUser(userId, linkedUser.id);
     if (existing.length) throw new Error(`Ya tenés la entidad "${existing[0].name}" vinculada a ese usuario`);
