@@ -10,14 +10,9 @@ export class EntidadesFinancierasService {
   }
 
   async listar(userId) {
-    const entidades = await this.entidadesFinancierasRepository.listar(userId);
-    for (const entidad of entidades) {
-      const gastos = await this.gastosRepository.getGastosByEntidad(entidad.id);
-      const gastosActivos = gastos.filter(g => (Number(g.payed_quotas) < Number(g.number_of_quotas) || g.fixed_expense));
-      entidad.cantidad = gastosActivos.length;
-      entidad.pending_count = await this.gastosRepository.countPendingByEntidad(entidad.id);
-    }
-    return entidades;
+    // El repositorio ya trae `cantidad` y `pending_count` agregados en una
+    // sola query (ver EntidadesFinancierasRepository.listar).
+    return await this.entidadesFinancierasRepository.listar(userId);
   }
 
   async obtenerPorId(id, userId) {
