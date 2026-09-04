@@ -42,10 +42,17 @@ export class GastosService {
         const current = await this.gastosRepository.getById(id);
         if (!current.length) throw customError(ErrorCode.GASTO_NOT_FOUND);
 
+        const nameChanged = current[0].name !== name;
+        const editDetail = nameChanged ? `Nombre: "${current[0].name}" → "${name}"` : null;
+
         const [row] = await this.gastosRepository.update(id, name, amount, image_url, fixed_expense, type);
 
         if (row.length === 0) {
             throw customError(ErrorCode.GASTO_NOT_FOUND);
+        }
+
+        if (nameChanged) {
+            await this.movementsRepository.createGastoLog(id, MovementType.EDITED, null, null, null, editDetail);
         }
 
         if (payed_quotas !== undefined && !fixed_expense) {
@@ -87,6 +94,8 @@ export class GastosService {
             throw customError(ErrorCode.GASTO_NOT_FOUND);
         }
 
+        await this.movementsRepository.createGastoLog(id, MovementType.DELETE);
+
         if (linkedId) {
             if (delete_linked) {
                 await this.gastosRepository.delete(linkedId);
@@ -97,6 +106,18 @@ export class GastosService {
         }
 
         return row[0];
+    }
+
+    async restaurar(id) {
+        const row = await this.gastosRepository.restaurar(id);
+
+        if (!row || row.length === 0) {
+            throw customError(ErrorCode.GASTO_NOT_FOUND);
+        }
+
+        await this.movementsRepository.createGastoLog(id, MovementType.RESTORE);
+
+        return await this.getById(id);
     }
 
     // Crea una compra + su log de CREATION + un log de PAYMENT por cada cuota

@@ -101,6 +101,21 @@ export class GastosController {
         }
     }
 
+    restaurar = async (req, res) => {
+        try {
+            const { id } = req.params;
+
+            const data = await this.gastosService.restaurar(id);
+
+            res.json({
+                message: "Gasto restaurado con éxito",
+                data
+            });
+        } catch (err) {
+            return handleError(res, err);
+        }
+    }
+
     postergar = async (req, res) => {
         try {
             const { id } = req.params;

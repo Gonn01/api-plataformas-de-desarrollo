@@ -4,6 +4,8 @@ export const MovementType = Object.freeze({
     PENDING_PAYMENT: 'PENDING_PAYMENT',
     REFUND:          'REFUND',
     DELETE:          'DELETE',
+    EDITED:          'EDITED',
+    RESTORE:         'RESTORE',
 });
 
 export const Currency = Object.freeze({
