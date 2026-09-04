@@ -1,5 +1,5 @@
-import { logRed } from "../utils/logs_custom.js";
 import { Currency } from "../utils/enums.js";
+import { handleError, badRequest } from "../utils/errors.js";
 
 export class UserController {
     constructor(userService) {
@@ -12,9 +12,7 @@ export class UserController {
             const { preferred_currency } = req.body;
 
             if (!preferred_currency || !Object.values(Currency).includes(preferred_currency)) {
-                return res
-                    .status(400)
-                    .json({ error: `Debe enviar 'preferred_currency' válida (${Object.values(Currency).join(', ')})` });
+                return badRequest(res, `Debe enviar 'preferred_currency' válida (${Object.values(Currency).join(', ')})`);
             }
 
             const updated = await this.userService.updatePreferredCurrency(
@@ -27,8 +25,7 @@ export class UserController {
                 data: updated,
             });
         } catch (err) {
-            logRed(err);
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     };
 
@@ -38,23 +35,17 @@ export class UserController {
             const { sueldo, sueldo_currency } = req.body;
 
             if (sueldo === undefined || sueldo === null || sueldo === "") {
-                return res
-                    .status(400)
-                    .json({ error: "Debe enviar 'sueldo'" });
+                return badRequest(res, "Debe enviar 'sueldo'");
             }
 
             const sueldoNumber = Number(sueldo);
 
             if (!Number.isFinite(sueldoNumber) || sueldoNumber < 0) {
-                return res
-                    .status(400)
-                    .json({ error: "Debe enviar 'sueldo' como un número mayor o igual a 0" });
+                return badRequest(res, "Debe enviar 'sueldo' como un número mayor o igual a 0");
             }
 
             if (sueldo_currency !== undefined && !Object.values(Currency).includes(sueldo_currency)) {
-                return res
-                    .status(400)
-                    .json({ error: `Debe enviar 'sueldo_currency' válida (${Object.values(Currency).join(', ')})` });
+                return badRequest(res, `Debe enviar 'sueldo_currency' válida (${Object.values(Currency).join(', ')})`);
             }
 
             const updated = await this.userService.updateSueldo(
@@ -68,8 +59,7 @@ export class UserController {
                 data: updated,
             });
         } catch (err) {
-            logRed(err);
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     };
 }

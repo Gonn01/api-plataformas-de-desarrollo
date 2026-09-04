@@ -1,4 +1,4 @@
-import { logRed } from "../utils/logs_custom.js";
+import { handleError } from "../utils/errors.js";
 
 export class CompartidosController {
     constructor(compartidosService) {
@@ -11,8 +11,7 @@ export class CompartidosController {
             const data = await this.compartidosService.getCompartidos(userId);
             res.json({ message: "Gastos compartidos obtenidos", data });
         } catch (err) {
-            logRed(err);
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -25,15 +24,7 @@ export class CompartidosController {
             const data = await this.compartidosService.aprobar(id, userId, financial_entity_id, new_entity_name);
             res.json({ message: "Gasto aprobado con éxito", data });
         } catch (err) {
-            logRed(err);
-            if (err.message === "Gasto no encontrado") return res.status(404).json({ error: err.message });
-            if (err.message === "No autorizado") return res.status(403).json({ error: err.message });
-            if (
-                err.message === "El gasto no está pendiente de aprobación" ||
-                err.message === "Debe seleccionar una entidad o proporcionar un nombre para crear una nueva" ||
-                err.message === "Entidad no encontrada o no pertenece al usuario"
-            ) return res.status(400).json({ error: err.message });
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -45,11 +36,7 @@ export class CompartidosController {
             const data = await this.compartidosService.rechazar(id, userId);
             res.json({ message: "Gasto rechazado", data });
         } catch (err) {
-            logRed(err);
-            if (err.message === "Gasto no encontrado") return res.status(404).json({ error: err.message });
-            if (err.message === "No autorizado") return res.status(403).json({ error: err.message });
-            if (err.message === "El gasto no está pendiente de aprobación") return res.status(400).json({ error: err.message });
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -61,14 +48,7 @@ export class CompartidosController {
             const data = await this.compartidosService.reintentar(id, userId);
             res.json({ message: "Gasto reenviado con éxito", data });
         } catch (err) {
-            logRed(err);
-            if (err.message === "Gasto no encontrado") return res.status(404).json({ error: err.message });
-            if (err.message === "No autorizado") return res.status(403).json({ error: err.message });
-            if (
-                err.message === "No hay gasto compartido asociado" ||
-                err.message === "El gasto compartido no está rechazado"
-            ) return res.status(400).json({ error: err.message });
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -80,10 +60,7 @@ export class CompartidosController {
             const data = await this.compartidosService.confirmarPago(movementId, userId);
             res.json({ message: "Pago confirmado", data });
         } catch (err) {
-            logRed(err);
-            if (err.message === "Pago pendiente no encontrado") return res.status(404).json({ error: err.message });
-            if (err.message === "No autorizado") return res.status(403).json({ error: err.message });
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -95,10 +72,7 @@ export class CompartidosController {
             const data = await this.compartidosService.rechazarPago(movementId, userId);
             res.json({ message: "Pago rechazado", data });
         } catch (err) {
-            logRed(err);
-            if (err.message === "Pago pendiente no encontrado") return res.status(404).json({ error: err.message });
-            if (err.message === "No autorizado") return res.status(403).json({ error: err.message });
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 }

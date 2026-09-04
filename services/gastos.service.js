@@ -1,5 +1,6 @@
 import { MovementType, ExpenseStatus, ExpenseType } from "../utils/enums.js";
 import { triggerCompartidos } from "../utils/pusher.js";
+import { customError, ErrorCode } from "../utils/errors.js";
 
 export class GastosService {
     constructor({ gastosRepository, movementsRepository, entidadesFinancierasRepository, categoriasRepository, reconcileRepository }) {
@@ -14,17 +15,9 @@ export class GastosService {
     // no tiene una sesión de cuentas abierta. Devuelve la sesión abierta.
     async requireReconcileSession(userId) {
         if (!this.reconcileRepository) return null;
-        if (!userId) {
-            const err = new Error("RECONCILE_REQUIRED");
-            err.code = "RECONCILE_REQUIRED";
-            throw err;
-        }
+        if (!userId) throw customError(ErrorCode.RECONCILE_REQUIRED);
         const session = await this.reconcileRepository.getOpenSession(userId);
-        if (!session) {
-            const err = new Error("RECONCILE_REQUIRED");
-            err.code = "RECONCILE_REQUIRED";
-            throw err;
-        }
+        if (!session) throw customError(ErrorCode.RECONCILE_REQUIRED);
         return session;
     }
 
@@ -32,7 +25,7 @@ export class GastosService {
         const row = await this.gastosRepository.getById(id);
 
         if (row.length === 0) {
-            throw new Error("Gasto no encontrado");
+            throw customError(ErrorCode.GASTO_NOT_FOUND);
         }
 
         const [movements, categories] = await Promise.all([
@@ -47,12 +40,12 @@ export class GastosService {
 
     async update(id, name, amount, image_url, fixed_expense, type, category_ids, payed_quotas, apply_to_linked = false) {
         const current = await this.gastosRepository.getById(id);
-        if (!current.length) throw new Error("No se pudo actualizar (Gasto no existe)");
+        if (!current.length) throw customError(ErrorCode.GASTO_NOT_FOUND);
 
         const [row] = await this.gastosRepository.update(id, name, amount, image_url, fixed_expense, type);
 
         if (row.length === 0) {
-            throw new Error("No se pudo actualizar (Gasto no existe)");
+            throw customError(ErrorCode.GASTO_NOT_FOUND);
         }
 
         if (payed_quotas !== undefined && !fixed_expense) {
@@ -91,7 +84,7 @@ export class GastosService {
         const row = await this.gastosRepository.delete(id);
 
         if (!row || row.length === 0) {
-            throw new Error("Gasto no encontrado");
+            throw customError(ErrorCode.GASTO_NOT_FOUND);
         }
 
         if (linkedId) {
@@ -175,13 +168,13 @@ export class GastosService {
         postponed = false
     ) {
         const entidad = await this.entidadesFinancierasRepository.getById(financial_entity_id, userId);
-        if (!entidad.length) throw new Error("Entidad financiera no encontrada o eliminada");
+        if (!entidad.length) throw customError(ErrorCode.ENTIDAD_FINANCIERA_NOT_FOUND);
 
         // "Pagar con otra entidad": validamos la entidad de pago antes de crear nada.
         const usaEntidadPago = payment_entity_id && String(payment_entity_id) !== String(financial_entity_id);
         if (usaEntidadPago) {
             const entidadPago = await this.entidadesFinancierasRepository.getById(payment_entity_id, userId);
-            if (!entidadPago.length) throw new Error("Entidad de pago no encontrada o eliminada");
+            if (!entidadPago.length) throw customError(ErrorCode.ENTIDAD_PAGO_NOT_FOUND);
         }
 
         const rows = await this.#crearCompraConLogs({
@@ -257,13 +250,13 @@ export class GastosService {
 
     async postergarGasto(id, userId, postponed) {
         const current = await this.gastosRepository.getById(id);
-        if (!current.length) throw new Error("Gasto no encontrado");
+        if (!current.length) throw customError(ErrorCode.GASTO_NOT_FOUND);
 
         const entidad = await this.entidadesFinancierasRepository.getById(
             current[0].financial_entity_id,
             userId,
         );
-        if (!entidad.length) throw new Error("No autorizado");
+        if (!entidad.length) throw customError(ErrorCode.NO_AUTORIZADO);
 
         const [updated] = await this.gastosRepository.setPostponed(id, Boolean(postponed));
         return updated;
@@ -271,13 +264,13 @@ export class GastosService {
 
     async marcarFavorito(id, userId, favorite) {
         const current = await this.gastosRepository.getById(id);
-        if (!current.length) throw new Error("Gasto no encontrado");
+        if (!current.length) throw customError(ErrorCode.GASTO_NOT_FOUND);
 
         const entidad = await this.entidadesFinancierasRepository.getById(
             current[0].financial_entity_id,
             userId,
         );
-        if (!entidad.length) throw new Error("No autorizado");
+        if (!entidad.length) throw customError(ErrorCode.NO_AUTORIZADO);
 
         const [updated] = await this.gastosRepository.setFavorite(id, Boolean(favorite));
         return updated;
@@ -297,11 +290,11 @@ export class GastosService {
         const rows = await this.gastosRepository.getById(purchase_id);
 
         if (rows.length === 0) {
-            throw new Error("Gasto no encontrado");
+            throw customError(ErrorCode.GASTO_NOT_FOUND);
         }
 
         if (rows[0].is_postponed) {
-            throw new Error("GASTO_POSTERGADO");
+            throw customError(ErrorCode.GASTO_POSTERGADO);
         }
 
         await this.reconcileRepository.upsertItem(session.id, purchase_id, false);
@@ -359,8 +352,8 @@ export class GastosService {
     async refundCuota(purchase_id) {
         const rows = await this.gastosRepository.getById(purchase_id);
 
-        if (rows.length === 0) throw new Error("Gasto no encontrado");
-        if (rows[0].payed_quotas === 0) throw new Error("No hay cuotas pagadas para revertir");
+        if (rows.length === 0) throw customError(ErrorCode.GASTO_NOT_FOUND);
+        if (rows[0].payed_quotas === 0) throw customError(ErrorCode.SIN_CUOTAS_PARA_REVERTIR);
 
         const deleted = await this.movementsRepository.deleteLastPayment(purchase_id);
         await this.movementsRepository.createGastoLog(purchase_id, MovementType.REFUND, deleted[0]?.amount ?? null, new Date());
@@ -370,7 +363,7 @@ export class GastosService {
 
     async pagarCuotasLote(purchaseIds, userId) {
         if (!Array.isArray(purchaseIds) || purchaseIds.length === 0) {
-            throw new Error("La lista de IDs de compra es inválida.");
+            throw customError(ErrorCode.LISTA_IDS_INVALIDA);
         }
 
         const session = await this.requireReconcileSession(userId);

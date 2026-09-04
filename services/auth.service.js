@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config/env.js";
+import { customError, ErrorCode } from "../utils/errors.js";
 
 export class AuthService {
     constructor({
@@ -13,7 +14,7 @@ export class AuthService {
         const users = await this.authRepository.findUserByEmail(email);
 
         if (users.length === 0) {
-            throw new Error("Credenciales incorrectas");
+            throw customError(ErrorCode.CREDENCIALES_INVALIDAS);
         }
 
         const user = users[0];
@@ -21,7 +22,7 @@ export class AuthService {
         const match = await bcrypt.compare(password, user.password);
 
         if (!match) {
-            throw new Error("Credenciales incorrectas");
+            throw customError(ErrorCode.CREDENCIALES_INVALIDAS);
         }
 
         const token = jwt.sign(
@@ -66,7 +67,7 @@ export class AuthService {
         const existing = await this.authRepository.findUserByEmail(email);
 
         if (existing.length > 0) {
-            throw new Error("El email ya existe");
+            throw customError(ErrorCode.EMAIL_YA_REGISTRADO);
         }
 
         const hash = await bcrypt.hash(password, 12);

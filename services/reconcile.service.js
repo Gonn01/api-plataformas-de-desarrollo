@@ -1,11 +1,5 @@
 import { logRed } from "../utils/logs_custom.js";
-
-export class ReconcileError extends Error {
-    constructor(code, message) {
-        super(message ?? code);
-        this.code = code;
-    }
-}
+import { customError, ErrorCode } from "../utils/errors.js";
 
 // El driver puede devolver columnas JSONB como string; normalizamos.
 function parseJson(value, fallback) {
@@ -89,7 +83,7 @@ export class ReconcileService {
 
     async finishSession(userId) {
         const session = await this.reconcileRepository.getOpenSession(userId);
-        if (!session) throw new ReconcileError("NO_OPEN_SESSION", "No hay una sesión de cuentas abierta");
+        if (!session) throw customError(ErrorCode.NO_OPEN_SESSION);
 
         // Pago diferido: marcar un gasto durante la sesión no lo paga. Recién al
         // cerrar la sesión se registran los pagos reales de todo lo marcado.
@@ -145,13 +139,13 @@ export class ReconcileService {
 
     async getSnapshot(userId, id) {
         const snapshot = await this.reconcileRepository.getSnapshot(userId, id);
-        if (!snapshot) throw new ReconcileError("SNAPSHOT_NOT_FOUND", "Snapshot no encontrado");
+        if (!snapshot) throw customError(ErrorCode.SNAPSHOT_NOT_FOUND);
         return normalizeSnapshot(snapshot);
     }
 
     async #requireOpenSession(userId) {
         const session = await this.reconcileRepository.getOpenSession(userId);
-        if (!session) throw new ReconcileError("RECONCILE_REQUIRED", "No hay una sesión de cuentas abierta");
+        if (!session) throw customError(ErrorCode.RECONCILE_REQUIRED, { message: "No hay una sesión de cuentas abierta" });
         return session;
     }
 

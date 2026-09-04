@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EntidadesFinancierasController } from "../controller/entidades-financieras.controller.js";
+import { customError, ErrorCode } from "../utils/errors.js";
 
 function makeRes() {
     const res = {};
@@ -114,7 +115,7 @@ describe("EntidadesFinancierasController", () => {
             await controller.crear(req, res);
 
             expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith({ error: "Falta el campo 'name'" });
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: "Falta el campo 'name'", code: "VALIDATION_ERROR" }));
             expect(service.crear).not.toHaveBeenCalled();
         });
 
@@ -132,12 +133,14 @@ describe("EntidadesFinancierasController", () => {
         it("responde 400 cuando la entidad ya existe", async () => {
             const req = makeReq({ body: { name: "Banco Galicia" } });
             const res = makeRes();
-            service.crear.mockRejectedValue(new Error("Ya existe esta entidad"));
+            service.crear.mockRejectedValue(customError(ErrorCode.ENTIDAD_YA_EXISTE));
 
             await controller.crear(req, res);
 
             expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith({ error: "Ya existe esta entidad" });
+            expect(res.json).toHaveBeenCalledWith(
+                expect.objectContaining({ error: "Ya existe esta entidad", code: "ENTIDAD_YA_EXISTE" }),
+            );
         });
     });
 
@@ -176,23 +179,27 @@ describe("EntidadesFinancierasController", () => {
         it("responde 400 cuando ya existe otra entidad con ese nombre", async () => {
             const req = makeReq({ params: { id: "5" }, body: { name: "Nombre Repetido" } });
             const res = makeRes();
-            service.actualizar.mockRejectedValue(new Error("Ya existe esta entidad"));
+            service.actualizar.mockRejectedValue(customError(ErrorCode.ENTIDAD_YA_EXISTE));
 
             await controller.actualizar(req, res);
 
             expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith({ error: "Ya existe esta entidad" });
+            expect(res.json).toHaveBeenCalledWith(
+                expect.objectContaining({ error: "Ya existe esta entidad", code: "ENTIDAD_YA_EXISTE" }),
+            );
         });
 
         it("responde 404 cuando la entidad no existe", async () => {
             const req = makeReq({ params: { id: "5" }, body: { name: "Nuevo Nombre" } });
             const res = makeRes();
-            service.actualizar.mockRejectedValue(new Error("Entidad no encontrada"));
+            service.actualizar.mockRejectedValue(customError(ErrorCode.ENTIDAD_NOT_FOUND));
 
             await controller.actualizar(req, res);
 
             expect(res.status).toHaveBeenCalledWith(404);
-            expect(res.json).toHaveBeenCalledWith({ error: "Entidad no encontrada" });
+            expect(res.json).toHaveBeenCalledWith(
+                expect.objectContaining({ error: "Entidad no encontrada", code: "ENTIDAD_NOT_FOUND" }),
+            );
         });
     });
 

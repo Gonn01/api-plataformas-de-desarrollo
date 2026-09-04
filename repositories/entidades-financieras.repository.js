@@ -1,15 +1,34 @@
 import { executeQuery } from "../db.js";
 
 export class EntidadesFinancierasRepository {
+    // Listado con los contadores ya agregados en una sola query (antes era un
+    // N+1: 1 query + 2 por entidad, secuenciales -> ~10s con la DB remota).
+    //   cantidad      = compras ACTIVE no saldadas (o gasto fijo)
+    //   pending_count = compras PENDING_APPROVAL
     async listar(userId) {
         return await executeQuery(
             `SELECT fe.id, fe.name, fe.linked_user_id, fe.is_favorite,
-                    u.name AS linked_user_name, u.email AS linked_user_email
+                    u.name AS linked_user_name, u.email AS linked_user_email,
+                    COUNT(p.id) FILTER (
+                        WHERE p.status = 'ACTIVE'
+                          AND (p.fixed_expense OR COALESCE(pm.paid, 0) < p.number_of_quotas)
+                    )::int AS cantidad,
+                    COUNT(p.id) FILTER (WHERE p.status = 'PENDING_APPROVAL')::int AS pending_count
              FROM financial_entities fe
              LEFT JOIN users u ON u.id = fe.linked_user_id
+             LEFT JOIN purchases p
+                    ON p.financial_entity_id = fe.id
+                   AND p.deleted = false
+             LEFT JOIN (
+                 SELECT purchase_id, COUNT(*) AS paid
+                 FROM purchases_movements
+                 WHERE movement_type = 'PAYMENT'
+                 GROUP BY purchase_id
+             ) pm ON pm.purchase_id = p.id
              WHERE fe.deleted = false AND fe.user_id = $1
+             GROUP BY fe.id, u.name, u.email
              ORDER BY fe.is_favorite DESC, fe.created_at DESC`,
-            [userId], true
+            [userId]
         );
     }
 

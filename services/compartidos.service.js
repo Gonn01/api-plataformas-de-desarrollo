@@ -1,5 +1,6 @@
 import { MovementType, ExpenseStatus } from "../utils/enums.js";
 import { triggerCompartidos } from "../utils/pusher.js";
+import { customError, ErrorCode } from "../utils/errors.js";
 
 export class CompartidosService {
     constructor({ gastosRepository, entidadesFinancierasRepository, movementsRepository }) {
@@ -27,17 +28,17 @@ export class CompartidosService {
 
     async #assertConfirmerDePago(pend, userId) {
         if (String(pend.created_by_user_id) === String(userId)) {
-            throw new Error("No autorizado");
+            throw customError(ErrorCode.NO_AUTORIZADO);
         }
         const [sibling] = await this.gastosRepository.getSharedSibling(pend.purchase_id);
         if (!sibling || String(sibling.counterparty_user_id) !== String(userId)) {
-            throw new Error("No autorizado");
+            throw customError(ErrorCode.NO_AUTORIZADO);
         }
     }
 
     async confirmarPago(movementId, userId) {
         const [pend] = await this.movementsRepository.getPendingPaymentById(movementId);
-        if (!pend) throw new Error("Pago pendiente no encontrado");
+        if (!pend) throw customError(ErrorCode.PAGO_PENDIENTE_NOT_FOUND);
 
         await this.#assertConfirmerDePago(pend, userId);
 
@@ -54,7 +55,7 @@ export class CompartidosService {
 
     async rechazarPago(movementId, userId) {
         const [pend] = await this.movementsRepository.getPendingPaymentById(movementId);
-        if (!pend) throw new Error("Pago pendiente no encontrado");
+        if (!pend) throw customError(ErrorCode.PAGO_PENDIENTE_NOT_FOUND);
 
         await this.#assertConfirmerDePago(pend, userId);
 
@@ -70,11 +71,11 @@ export class CompartidosService {
 
     async aprobar(gastoId, userId, financialEntityId, newEntityName) {
         const rows = await this.gastosRepository.getById(gastoId);
-        if (!rows.length) throw new Error("Gasto no encontrado");
+        if (!rows.length) throw customError(ErrorCode.GASTO_NOT_FOUND);
 
         const gasto = rows[0];
-        if (String(gasto.receiver_user_id) !== String(userId)) throw new Error("No autorizado");
-        if (gasto.status !== ExpenseStatus.PENDING_APPROVAL) throw new Error("El gasto no está pendiente de aprobación");
+        if (String(gasto.receiver_user_id) !== String(userId)) throw customError(ErrorCode.NO_AUTORIZADO);
+        if (gasto.status !== ExpenseStatus.PENDING_APPROVAL) throw customError(ErrorCode.GASTO_NO_PENDIENTE_APROBACION);
 
         let entityId = financialEntityId ?? null;
 
@@ -89,10 +90,10 @@ export class CompartidosService {
             }
         }
 
-        if (!entityId) throw new Error("Debe seleccionar una entidad o proporcionar un nombre para crear una nueva");
+        if (!entityId) throw customError(ErrorCode.ENTIDAD_O_NOMBRE_REQUERIDO);
 
         const entidad = await this.entidadesFinancierasRepository.getById(entityId, userId);
-        if (!entidad.length) throw new Error("Entidad no encontrada o no pertenece al usuario");
+        if (!entidad.length) throw customError(ErrorCode.ENTIDAD_NOT_FOUND_O_AJENA);
 
         const [[updated], notifRows] = await Promise.all([
             this.gastosRepository.aprobarGasto(gastoId, entityId),
@@ -117,11 +118,11 @@ export class CompartidosService {
 
     async rechazar(gastoId, userId) {
         const rows = await this.gastosRepository.getById(gastoId);
-        if (!rows.length) throw new Error("Gasto no encontrado");
+        if (!rows.length) throw customError(ErrorCode.GASTO_NOT_FOUND);
 
         const gasto = rows[0];
-        if (String(gasto.receiver_user_id) !== String(userId)) throw new Error("No autorizado");
-        if (gasto.status !== ExpenseStatus.PENDING_APPROVAL) throw new Error("El gasto no está pendiente de aprobación");
+        if (String(gasto.receiver_user_id) !== String(userId)) throw customError(ErrorCode.NO_AUTORIZADO);
+        if (gasto.status !== ExpenseStatus.PENDING_APPROVAL) throw customError(ErrorCode.GASTO_NO_PENDIENTE_APROBACION);
 
         const [[updated], senderRows] = await Promise.all([
             this.gastosRepository.updateStatus(gastoId, ExpenseStatus.REJECTED),
@@ -138,18 +139,18 @@ export class CompartidosService {
 
     async reintentar(gastoId, userId) {
         const originalRows = await this.gastosRepository.getById(gastoId);
-        if (!originalRows.length) throw new Error("Gasto no encontrado");
+        if (!originalRows.length) throw customError(ErrorCode.GASTO_NOT_FOUND);
 
         const original = originalRows[0];
 
         const entidad = await this.entidadesFinancierasRepository.getById(original.financial_entity_id, userId);
-        if (!entidad.length) throw new Error("No autorizado");
+        if (!entidad.length) throw customError(ErrorCode.NO_AUTORIZADO);
 
         const copyRows = await this.gastosRepository.getSharedCopyByOriginalId(gastoId);
-        if (!copyRows.length) throw new Error("No hay gasto compartido asociado");
+        if (!copyRows.length) throw customError(ErrorCode.GASTO_COMPARTIDO_NO_ASOCIADO);
 
         const copy = copyRows[0];
-        if (copy.status !== ExpenseStatus.REJECTED) throw new Error("El gasto compartido no está rechazado");
+        if (copy.status !== ExpenseStatus.REJECTED) throw customError(ErrorCode.GASTO_COMPARTIDO_NO_RECHAZADO);
 
         const [[updated]] = await Promise.all([
             this.gastosRepository.updateStatus(copy.id, ExpenseStatus.PENDING_APPROVAL),
