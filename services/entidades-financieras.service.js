@@ -19,6 +19,14 @@ export class EntidadesFinancierasService {
     return entidades;
   }
 
+  async listarEliminadas(userId) {
+    return await this.entidadesFinancierasRepository.listarEliminadas(userId);
+  }
+
+  async restaurar(id, userId) {
+    return await this.entidadesFinancierasRepository.restaurar(id, userId);
+  }
+
   async obtenerPorId(id, userId) {
     const entidad = await this.entidadesFinancierasRepository.getById(id, userId);
 
