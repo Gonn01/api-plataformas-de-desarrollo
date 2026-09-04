@@ -72,7 +72,7 @@ describe("GastosController", () => {
             await controller.crear(req, res);
 
             expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith({ error: "Faltan campos obligatorios" });
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: "Faltan campos obligatorios", code: "VALIDATION_ERROR" }));
             expect(service.crearGasto).not.toHaveBeenCalled();
         });
 
@@ -83,7 +83,7 @@ describe("GastosController", () => {
             await controller.crear(req, res);
 
             expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith({ error: "Faltan campos obligatorios" });
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: "Faltan campos obligatorios", code: "VALIDATION_ERROR" }));
         });
 
         it("responde 400 cuando falta amount", async () => {
@@ -93,7 +93,7 @@ describe("GastosController", () => {
             await controller.crear(req, res);
 
             expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith({ error: "Faltan campos obligatorios" });
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: "Faltan campos obligatorios", code: "VALIDATION_ERROR" }));
         });
 
         it("responde 500 cuando el servicio lanza un error", async () => {
@@ -236,7 +236,7 @@ describe("GastosController", () => {
             await controller.pagarCuotasLote(req, res);
 
             expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith({ error: "Debe enviar 'purchase_ids' como array no vacío" });
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: "Debe enviar 'purchase_ids' como array no vacío", code: "VALIDATION_ERROR" }));
             expect(service.pagarCuotasLote).not.toHaveBeenCalled();
         });
 
@@ -247,7 +247,7 @@ describe("GastosController", () => {
             await controller.pagarCuotasLote(req, res);
 
             expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith({ error: "Debe enviar 'purchase_ids' como array no vacío" });
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: "Debe enviar 'purchase_ids' como array no vacío", code: "VALIDATION_ERROR" }));
             expect(service.pagarCuotasLote).not.toHaveBeenCalled();
         });
 
@@ -258,7 +258,7 @@ describe("GastosController", () => {
             await controller.pagarCuotasLote(req, res);
 
             expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith({ error: "Debe enviar 'purchase_ids' como array no vacío" });
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: "Debe enviar 'purchase_ids' como array no vacío", code: "VALIDATION_ERROR" }));
         });
 
         it("responde 500 cuando el servicio lanza un error", async () => {

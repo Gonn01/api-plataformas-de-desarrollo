@@ -1,4 +1,5 @@
 import { MovementType } from "../utils/enums.js";
+import { customError, ErrorCode } from "../utils/errors.js";
 
 export class EntidadesFinancierasService {
   constructor({ entidadesFinancierasRepository, gastosRepository, movementsRepository, authRepository }) {
@@ -22,7 +23,7 @@ export class EntidadesFinancierasService {
   async obtenerPorId(id, userId) {
     const entidad = await this.entidadesFinancierasRepository.getById(id, userId);
 
-    if (!entidad.length) throw new Error("Entidad no encontrada");
+    if (!entidad.length) throw customError(ErrorCode.ENTIDAD_NOT_FOUND);
 
     const entity = entidad[0];
     const gastos = await this.gastosRepository.getGastosByEntidad(id);
@@ -50,7 +51,7 @@ export class EntidadesFinancierasService {
 
   async crear(name, userId) {
     const existing = await this.entidadesFinancierasRepository.findByName(userId, name);
-    if (existing.length) throw new Error("Ya existe esta entidad");
+    if (existing.length) throw customError(ErrorCode.ENTIDAD_YA_EXISTE);
 
     const [row] = await this.entidadesFinancierasRepository.create(name, userId);
 
@@ -61,10 +62,10 @@ export class EntidadesFinancierasService {
 
   async actualizar(id, name, userId) {
     const currentRows = await this.entidadesFinancierasRepository.getById(id, userId);
-    if (currentRows.length === 0) throw new Error("Entidad no encontrada");
+    if (currentRows.length === 0) throw customError(ErrorCode.ENTIDAD_NOT_FOUND);
 
     const existing = await this.entidadesFinancierasRepository.findByName(userId, name, id);
-    if (existing.length) throw new Error("Ya existe esta entidad");
+    if (existing.length) throw customError(ErrorCode.ENTIDAD_YA_EXISTE);
 
     const [row] = await this.entidadesFinancierasRepository.update(id, name, userId);
 
@@ -73,7 +74,7 @@ export class EntidadesFinancierasService {
 
   async marcarFavorito(id, userId, favorite) {
     const currentRows = await this.entidadesFinancierasRepository.getById(id, userId);
-    if (currentRows.length === 0) throw new Error("Entidad no encontrada");
+    if (currentRows.length === 0) throw customError(ErrorCode.ENTIDAD_NOT_FOUND);
 
     const [row] = await this.entidadesFinancierasRepository.setFavorite(id, userId, Boolean(favorite));
     return row;
@@ -83,7 +84,7 @@ export class EntidadesFinancierasService {
     const deletedRows = await this.entidadesFinancierasRepository.delete(id, userId);
 
     if (deletedRows.length === 0) {
-      throw new Error("Entidad no encontrada");
+      throw customError(ErrorCode.ENTIDAD_NOT_FOUND);
     }
 
     return deletedRows[0];
@@ -95,16 +96,20 @@ export class EntidadesFinancierasService {
 
   async vincularUsuario(entityId, userId, email) {
     const entidad = await this.entidadesFinancierasRepository.getById(entityId, userId);
-    if (!entidad.length) throw new Error("Entidad no encontrada");
+    if (!entidad.length) throw customError(ErrorCode.ENTIDAD_NOT_FOUND);
 
     const users = await this.authRepository.findUserByEmail(email);
-    if (!users.length) throw new Error("No existe un usuario registrado con ese email");
+    if (!users.length) throw customError(ErrorCode.USUARIO_EMAIL_NOT_FOUND);
 
     const linkedUser = users[0];
-    if (linkedUser.id === parseInt(userId)) throw new Error("No podés vincular tu propia cuenta");
+    if (linkedUser.id === parseInt(userId)) throw customError(ErrorCode.VINCULAR_CUENTA_PROPIA);
 
     const existing = await this.entidadesFinancierasRepository.findByLinkedUser(userId, linkedUser.id);
-    if (existing.length) throw new Error(`Ya tenés la entidad "${existing[0].name}" vinculada a ese usuario`);
+    if (existing.length) {
+      throw customError(ErrorCode.ENTIDAD_YA_VINCULADA, {
+        message: `Ya tenés la entidad "${existing[0].name}" vinculada a ese usuario`,
+      });
+    }
 
     const updated = await this.entidadesFinancierasRepository.vincularUsuario(entityId, userId, linkedUser.id);
     return { ...updated[0], linked_user_name: linkedUser.name, linked_user_email: linkedUser.email };
@@ -112,7 +117,7 @@ export class EntidadesFinancierasService {
 
   async desvincularUsuario(entityId, userId) {
     const entidad = await this.entidadesFinancierasRepository.getById(entityId, userId);
-    if (!entidad.length) throw new Error("Entidad no encontrada");
+    if (!entidad.length) throw customError(ErrorCode.ENTIDAD_NOT_FOUND);
 
     const updated = await this.entidadesFinancierasRepository.desvincularUsuario(entityId, userId);
     return updated[0];

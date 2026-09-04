@@ -1,4 +1,5 @@
-import { logRed } from "../utils/logs_custom.js";
+import { handleError, badRequest } from "../utils/errors.js";
+import { HttpStatus } from "../utils/http_status.js";
 
 export class EntidadesFinancierasController {
     constructor(entidadesFinancierasService) {
@@ -16,8 +17,7 @@ export class EntidadesFinancierasController {
                 data: response
             });
         } catch (err) {
-            logRed(err);
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -33,8 +33,7 @@ export class EntidadesFinancierasController {
                 data: response
             });
         } catch (err) {
-            logRed(err);
-            res.status(500).json({ error: "Error en el servidor: " + err.message });
+            return handleError(res, err);
         }
     };
 
@@ -44,19 +43,17 @@ export class EntidadesFinancierasController {
             const { userId } = req.session;
 
             if (!name) {
-                return res.status(400).json({ error: "Falta el campo 'name'" });
+                return badRequest(res, "Falta el campo 'name'");
             }
 
             const response = await this.entidadesFinancierasService.crear(name, userId);
 
-            res.status(201).json({
+            res.status(HttpStatus.CREATED).json({
                 message: "Entidad financiera creada con éxito",
                 data: response
             });
         } catch (err) {
-            logRed(err);
-            if (err.message === "Ya existe esta entidad") return res.status(400).json({ error: err.message });
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -74,10 +71,7 @@ export class EntidadesFinancierasController {
                 data: response
             });
         } catch (err) {
-            logRed(err);
-            if (err.message === "Entidad no encontrada") return res.status(404).json({ error: err.message });
-            if (err.message === "Ya existe esta entidad") return res.status(400).json({ error: err.message });
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -94,9 +88,7 @@ export class EntidadesFinancierasController {
                 data: response
             });
         } catch (err) {
-            logRed(err);
-            if (err.message === "Entidad no encontrada") return res.status(404).json({ error: err.message });
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -112,8 +104,7 @@ export class EntidadesFinancierasController {
                 data: response
             });
         } catch (err) {
-            logRed(err);
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -124,7 +115,7 @@ export class EntidadesFinancierasController {
             const { userId } = req.session;
 
             if (!email) {
-                return res.status(400).json({ error: "Falta el campo 'email'" });
+                return badRequest(res, "Falta el campo 'email'");
             }
 
             const response = await this.entidadesFinancierasService.vincularUsuario(id, userId, email);
@@ -134,12 +125,7 @@ export class EntidadesFinancierasController {
                 data: response
             });
         } catch (err) {
-            logRed(err);
-            if (err.message === "Entidad no encontrada") return res.status(404).json({ error: err.message });
-            if (err.message === "No existe un usuario registrado con ese email") return res.status(404).json({ error: err.message });
-            if (err.message === "No podés vincular tu propia cuenta") return res.status(400).json({ error: err.message });
-            if (err.message.startsWith("Ya tenés la entidad")) return res.status(400).json({ error: err.message });
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -155,10 +141,7 @@ export class EntidadesFinancierasController {
                 data: response
             });
         } catch (err) {
-            logRed(err);
-            if (err.message === "Entidad no encontrada") return res.status(404).json({ error: err.message });
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 }
-

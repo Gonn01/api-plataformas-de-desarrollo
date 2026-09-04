@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import routesIndex from "./routes/index.js";
 import { logBlue, logRed } from "./utils/logs_custom.js";
+import { errorMiddleware } from "./utils/errors.js";
 import { ensureReconcileSchema } from "./repositories/reconcile.repository.js";
 import { ensureGastosSchema } from "./repositories/gastos.repository.js";
 
@@ -12,6 +13,10 @@ app.use(express.json());
 const port = process.env.PORT || 3000;
 
 app.use("/api", routesIndex);
+
+// Red de seguridad: si un handler async lanza sin capturar, traduce el error
+// a una respuesta HTTP en vez de tumbar el request.
+app.use(errorMiddleware);
 
 try {
     await ensureReconcileSchema();

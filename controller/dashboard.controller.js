@@ -1,4 +1,4 @@
-import { logRed } from "../utils/logs_custom.js";
+import { handleError } from "../utils/errors.js";
 
 export class DashboardController {
   constructor(dashboardService) {
@@ -16,8 +16,7 @@ export class DashboardController {
         data: response
       });
     } catch (err) {
-      logRed(err);
-      res.status(500).json({ error: "Error en el servidor" });
+      return handleError(res, err);
     }
   }
 
