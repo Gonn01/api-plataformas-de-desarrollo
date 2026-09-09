@@ -28,6 +28,9 @@ export async function ensureGastosSchema() {
     ["purchases_movements.created_by_user_id", `
       ALTER TABLE purchases_movements ADD COLUMN IF NOT EXISTS created_by_user_id INTEGER
     `],
+    ["purchases_movements.detail", `
+      ALTER TABLE purchases_movements ADD COLUMN IF NOT EXISTS detail TEXT
+    `],
     ["purchases.is_postponed", `
       ALTER TABLE purchases ADD COLUMN IF NOT EXISTS is_postponed BOOLEAN NOT NULL DEFAULT false
     `],
@@ -60,11 +63,13 @@ export async function ensureGastosSchema() {
 
   // "purchases_movements.movement_type" es un enum de Postgres: hay que registrar
   // el valor PENDING_PAYMENT antes de poder insertarlo.
-  try {
-    await ensureMovementTypeValue("PENDING_PAYMENT");
-  } catch (err) {
-    logRed(`[gastos schema] falló "movement_type += PENDING_PAYMENT": ${err.message}`);
-    throw err;
+  for (const value of ["PENDING_PAYMENT", "EDITED", "RESTORE", "DELETE"]) {
+    try {
+      await ensureMovementTypeValue(value);
+    } catch (err) {
+      logRed(`[gastos schema] falló "movement_type += ${value}": ${err.message}`);
+      throw err;
+    }
   }
 
   logGreen("[gastos schema] OK");
@@ -201,6 +206,13 @@ export class GastosRepository {
   async delete(id) {
     return await executeQuery(
       `UPDATE purchases SET deleted = true WHERE id = $1 RETURNING id`,
+      [id], true
+    );
+  }
+
+  async restaurar(id) {
+    return await executeQuery(
+      `UPDATE purchases SET deleted = false WHERE id = $1 RETURNING id`,
       [id], true
     );
   }
