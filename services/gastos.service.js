@@ -11,14 +11,20 @@ export class GastosService {
         this.reconcileRepository = reconcileRepository;
     }
 
-    // "Modo hacer cuentas": no se puede registrar un pago si el usuario
-    // no tiene una sesión de cuentas abierta. Devuelve la sesión abierta.
+    // "Modo hacer cuentas": el pago en lote (dashboard) exige una sesión abierta.
+    // Devuelve la sesión abierta o tira RECONCILE_REQUIRED.
     async requireReconcileSession(userId) {
         if (!this.reconcileRepository) return null;
         if (!userId) throw customError(ErrorCode.RECONCILE_REQUIRED);
         const session = await this.reconcileRepository.getOpenSession(userId);
         if (!session) throw customError(ErrorCode.RECONCILE_REQUIRED);
         return session;
+    }
+
+    // Devuelve la sesión de cuentas abierta del usuario, o null si no hay.
+    async getOpenReconcileSession(userId) {
+        if (!this.reconcileRepository || !userId) return null;
+        return await this.reconcileRepository.getOpenSession(userId);
     }
 
     async getById(id) {
@@ -302,12 +308,16 @@ export class GastosService {
         return await this.categoriasRepository.getCategoriasByGasto(gastoId);
     }
 
-    // "Modo hacer cuentas" diferido: pagar una cuota NO registra el pago en el
-    // momento. Solo marca el gasto en la sesión abierta; el pago real se efectúa
-    // al cerrar la sesión (ver ReconcileService.finishSession -> efectuarPago).
+    /**
+     * Pagar / registrar el cobro de una cuota.
+     *
+     *  - Con sesión de "hacer cuentas" abierta: DIFERIDO. Solo marca el gasto en
+     *    la sesión; el pago real se registra al cerrarla (finishSession ->
+     *    efectuarPago) y queda en el historial del gasto y en el de cuentas.
+     *  - Sin sesión abierta: DIRECTO. Registra el movimiento ahora en el
+     *    historial del gasto. NO entra en ningún resumen de "hacer cuentas".
+     */
     async pagarCuota(purchase_id, userId) {
-        const session = await this.requireReconcileSession(userId);
-
         const rows = await this.gastosRepository.getById(purchase_id);
 
         if (rows.length === 0) {
@@ -318,9 +328,15 @@ export class GastosService {
             throw customError(ErrorCode.GASTO_POSTERGADO);
         }
 
-        await this.reconcileRepository.upsertItem(session.id, purchase_id, false);
+        const session = await this.getOpenReconcileSession(userId);
 
-        return rows;
+        if (session) {
+            await this.reconcileRepository.upsertItem(session.id, purchase_id, false);
+            return rows;
+        }
+
+        await this.efectuarPago(rows[0], userId);
+        return await this.gastosRepository.getById(purchase_id);
     }
 
     /**
@@ -370,6 +386,9 @@ export class GastosService {
         return { pending: false };
     }
 
+    // Revertir el último pago de una cuota. Siempre es directo: borra el
+    // movimiento PAYMENT y registra un REFUND en el historial del gasto.
+    // No interactúa con las sesiones de "hacer cuentas".
     async refundCuota(purchase_id) {
         const rows = await this.gastosRepository.getById(purchase_id);
 
