@@ -105,7 +105,7 @@ export class EntidadesFinancierasService {
     if (!users.length) throw customError(ErrorCode.USUARIO_EMAIL_NOT_FOUND);
 
     const linkedUser = users[0];
-    if (linkedUser.id === parseInt(userId)) throw customError(ErrorCode.VINCULAR_CUENTA_PROPIA);
+    if (Number(linkedUser.id) === Number(userId)) throw customError(ErrorCode.VINCULAR_CUENTA_PROPIA);
 
     const existing = await this.entidadesFinancierasRepository.findByLinkedUser(userId, linkedUser.id);
     if (existing.length) {
