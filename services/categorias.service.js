@@ -1,3 +1,5 @@
+import { customError, ErrorCode } from "../utils/errors.js";
+
 export class CategoriasService {
     constructor({ categoriasRepository }) {
         this.categoriasRepository = categoriasRepository;
@@ -14,13 +16,13 @@ export class CategoriasService {
 
     async actualizar(id, name, color, userId) {
         const rows = await this.categoriasRepository.update(id, name, color, userId);
-        if (!rows.length) throw new Error("Categoría no encontrada");
+        if (!rows.length) throw customError(ErrorCode.CATEGORIA_NOT_FOUND);
         return rows[0];
     }
 
     async eliminar(id, userId) {
         const rows = await this.categoriasRepository.delete(id, userId);
-        if (!rows.length) throw new Error("Categoría no encontrada");
+        if (!rows.length) throw customError(ErrorCode.CATEGORIA_NOT_FOUND);
         return rows[0];
     }
 }

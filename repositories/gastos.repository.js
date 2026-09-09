@@ -37,6 +37,16 @@ export async function ensureGastosSchema() {
     ["financial_entities.is_favorite", `
       ALTER TABLE financial_entities ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN NOT NULL DEFAULT false
     `],
+    // Índices para el listado de entidades y los CALCULATED_FIELDS (que
+    // cuentan movimientos por compra en casi todas las queries de gastos).
+    ["idx purchases(financial_entity_id, status)", `
+      CREATE INDEX IF NOT EXISTS purchases_entity_status_idx
+        ON purchases (financial_entity_id, status) WHERE deleted = false
+    `],
+    ["idx purchases_movements(purchase_id, movement_type)", `
+      CREATE INDEX IF NOT EXISTS purchases_movements_purchase_type_idx
+        ON purchases_movements (purchase_id, movement_type)
+    `],
   ];
 
   for (const [name, sql] of steps) {

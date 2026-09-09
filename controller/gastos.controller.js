@@ -1,4 +1,5 @@
-import { logRed } from "../utils/logs_custom.js";
+import { handleError, badRequest } from "../utils/errors.js";
+import { HttpStatus } from "../utils/http_status.js";
 
 export class GastosController {
 
@@ -25,7 +26,7 @@ export class GastosController {
             const { userId } = req.session;
 
             if (!financial_entity_id || !name || !amount || !currency_type) {
-                return res.status(400).json({ error: "Faltan campos obligatorios" });
+                return badRequest(res, "Faltan campos obligatorios");
             }
 
             const inserted = await this.gastosService.crearGasto(
@@ -43,19 +44,12 @@ export class GastosController {
                 payment_entity_id,
                 postponed
             );
-            res.status(201).json({
+            res.status(HttpStatus.CREATED).json({
                 message: "Gasto creado con éxito",
                 data: inserted[0],
             });
         } catch (err) {
-            logRed(err);
-            if (
-                err.message === "Entidad financiera no encontrada o eliminada" ||
-                err.message === "Entidad de pago no encontrada o eliminada"
-            ) {
-                return res.status(404).json({ error: err.message });
-            }
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     };
 
@@ -70,8 +64,7 @@ export class GastosController {
                 data: response
             });
         } catch (err) {
-            logRed(err);
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -87,8 +80,7 @@ export class GastosController {
                 data: response
             });
         } catch (err) {
-            logRed(err);
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -105,8 +97,7 @@ export class GastosController {
                 data: id
             });
         } catch (err) {
-            logRed(err);
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -119,10 +110,7 @@ export class GastosController {
             const data = await this.gastosService.postergarGasto(id, userId, postponed);
             res.json({ message: "Gasto actualizado", data });
         } catch (err) {
-            logRed(err);
-            if (err.message === "Gasto no encontrado") return res.status(404).json({ error: err.message });
-            if (err.message === "No autorizado") return res.status(403).json({ error: err.message });
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -135,10 +123,7 @@ export class GastosController {
             const data = await this.gastosService.marcarFavorito(id, userId, favorite);
             res.json({ message: "Gasto actualizado", data });
         } catch (err) {
-            logRed(err);
-            if (err.message === "Gasto no encontrado") return res.status(404).json({ error: err.message });
-            if (err.message === "No autorizado") return res.status(403).json({ error: err.message });
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -154,20 +139,7 @@ export class GastosController {
                 data: updated[0]
             });
         } catch (err) {
-            logRed(err);
-            if (err.code === "RECONCILE_REQUIRED") {
-                return res.status(409).json({
-                    error: 'Activá el modo "Hacer cuentas" para registrar pagos.',
-                    code: "RECONCILE_REQUIRED"
-                });
-            }
-            if (err.message === "GASTO_POSTERGADO") {
-                return res.status(409).json({
-                    error: "El gasto está postergado para la próxima sesión de cuentas.",
-                    code: "GASTO_POSTERGADO"
-                });
-            }
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -182,11 +154,7 @@ export class GastosController {
                 data: updated[0]
             });
         } catch (err) {
-            logRed(err);
-            if (err.message === "Gasto no encontrado" || err.message === "No hay cuotas pagadas para revertir") {
-                return res.status(400).json({ error: err.message });
-            }
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -196,14 +164,13 @@ export class GastosController {
             const { category_ids } = req.body;
 
             if (!Array.isArray(category_ids)) {
-                return res.status(400).json({ error: "Debe enviar 'category_ids' como array" });
+                return badRequest(res, "Debe enviar 'category_ids' como array");
             }
 
             const data = await this.gastosService.actualizarCategorias(id, category_ids);
             res.json({ message: "Categorías actualizadas con éxito", data });
         } catch (err) {
-            logRed(err);
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -213,9 +180,7 @@ export class GastosController {
             const { userId } = req.session;
 
             if (!Array.isArray(purchase_ids) || purchase_ids.length === 0) {
-                return res.status(400).json({
-                    error: "Debe enviar 'purchase_ids' como array no vacío",
-                });
+                return badRequest(res, "Debe enviar 'purchase_ids' como array no vacío");
             }
 
             const { updated, failed } = await this.gastosService.pagarCuotasLote(purchase_ids, userId);
@@ -228,14 +193,7 @@ export class GastosController {
                 }
             });
         } catch (err) {
-            logRed(err);
-            if (err.code === "RECONCILE_REQUIRED") {
-                return res.status(409).json({
-                    error: 'Activá el modo "Hacer cuentas" para registrar pagos.',
-                    code: "RECONCILE_REQUIRED"
-                });
-            }
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 

@@ -1,5 +1,5 @@
 
-import { logRed } from "../utils/logs_custom.js";
+import { handleError, badRequest } from "../utils/errors.js";
 
 export class AuthController {
     constructor(authService) {
@@ -13,7 +13,7 @@ export class AuthController {
             const firebaseIdFinal = firebaseId ?? null;
 
             if (!name || !email || !password) {
-                return res.status(400).json({ error: "Faltan campos" });
+                return badRequest(res, "Faltan campos");
             }
 
             await this.authService.register(name, email, password, firebaseIdFinal);
@@ -23,8 +23,7 @@ export class AuthController {
             });
 
         } catch (err) {
-            logRed(err);
-            res.status(500).json({ error: "Error en el servidor: " + err.message });
+            return handleError(res, err);
         }
     }
 
@@ -33,7 +32,7 @@ export class AuthController {
             const { email, password } = req.body;
 
             if (!email || !password) {
-                return res.status(400).json({ error: "Faltan campos" });
+                return badRequest(res, "Faltan campos");
             }
 
             const response = await this.authService.login(email, password);
@@ -44,8 +43,7 @@ export class AuthController {
             });
 
         } catch (err) {
-            logRed(err);
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     }
 
@@ -54,7 +52,7 @@ export class AuthController {
             const { firebaseId, name, email, avatar } = req.body;
 
             if (!firebaseId) {
-                return res.status(400).json({ error: "Token faltante" });
+                return badRequest(res, "Token faltante");
             }
             const response = await this.authService.firebaseLogin(name, email, avatar, firebaseId);
             res.json({
@@ -63,9 +61,7 @@ export class AuthController {
             });
 
         } catch (err) {
-            logRed(err);
-            res.status(500).json({ error: "Error en el servidor" });
+            return handleError(res, err);
         }
     };
 }
-

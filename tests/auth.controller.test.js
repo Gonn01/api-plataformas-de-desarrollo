@@ -56,7 +56,7 @@ describe("AuthController", () => {
             await controller.register(req, res);
 
             expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith({ error: "Faltan campos" });
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: "Faltan campos", code: "VALIDATION_ERROR" }));
             expect(authService.register).not.toHaveBeenCalled();
         });
 
@@ -93,7 +93,7 @@ describe("AuthController", () => {
             await controller.login(req, res);
 
             expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith({ error: "Faltan campos" });
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: "Faltan campos", code: "VALIDATION_ERROR" }));
             expect(authService.login).not.toHaveBeenCalled();
         });
 
@@ -130,7 +130,7 @@ describe("AuthController", () => {
             await controller.firebaseLogin(req, res);
 
             expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith({ error: "Token faltante" });
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: "Token faltante", code: "VALIDATION_ERROR" }));
             expect(authService.firebaseLogin).not.toHaveBeenCalled();
         });
 
