@@ -48,8 +48,32 @@ export class GastosService {
         const current = await this.gastosRepository.getById(id);
         if (!current.length) throw customError(ErrorCode.GASTO_NOT_FOUND);
 
-        const nameChanged = current[0].name !== name;
-        const editDetail = nameChanged ? `Nombre: "${current[0].name}" → "${name}"` : null;
+        const normalizedType = type != null ? String(type).toUpperCase() : current[0].type;
+
+        const changes = [];
+
+        if (current[0].name !== name) {
+            changes.push(`Nombre: "${current[0].name}" → "${name}"`);
+        }
+        if (Number(current[0].amount) !== Number(amount)) {
+            changes.push(`Monto: $${current[0].amount} → $${amount}`);
+        }
+        if (current[0].type !== normalizedType) {
+            changes.push(`Tipo: ${current[0].type === 'INGRESO' ? 'Ingreso' : 'Egreso'} → ${normalizedType === 'INGRESO' ? 'Ingreso' : 'Egreso'}`);
+        }
+        if (Boolean(current[0].fixed_expense) !== Boolean(fixed_expense)) {
+            changes.push(`Frecuencia: ${current[0].fixed_expense ? 'Fijo' : 'En cuotas'} → ${fixed_expense ? 'Fijo' : 'En cuotas'}`);
+        }
+        if (Array.isArray(category_ids)) {
+            const currentCategoryIds = (await this.categoriasRepository.getCategoriasByGasto(id))
+                .map((c) => String(c.id)).sort();
+            const newCategoryIds = category_ids.map((cid) => String(cid)).sort();
+            if (JSON.stringify(currentCategoryIds) !== JSON.stringify(newCategoryIds)) {
+                changes.push('Categorías actualizadas');
+            }
+        }
+
+        const editDetail = changes.length ? changes.join('\n') : null;
 
         const [row] = await this.gastosRepository.update(id, name, amount, image_url, fixed_expense, type);
 
@@ -57,7 +81,7 @@ export class GastosService {
             throw customError(ErrorCode.GASTO_NOT_FOUND);
         }
 
-        if (nameChanged) {
+        if (changes.length) {
             await this.movementsRepository.createGastoLog(id, MovementType.EDITED, null, null, null, editDetail);
         }
 
