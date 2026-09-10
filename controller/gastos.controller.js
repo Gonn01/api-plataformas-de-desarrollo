@@ -101,6 +101,22 @@ export class GastosController {
         }
     }
 
+    restaurar = async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { userId } = req.session;
+
+            const data = await this.gastosService.restaurar(id, userId);
+
+            res.json({
+                message: "Gasto restaurado correctamente",
+                data
+            });
+        } catch (err) {
+            return handleError(res, err);
+        }
+    }
+
     postergar = async (req, res) => {
         try {
             const { id } = req.params;
@@ -131,8 +147,9 @@ export class GastosController {
         try {
             const { id } = req.params;
             const { userId } = req.session;
+            const direct = req.body?.direct === true || req.body?.direct === "true";
 
-            const updated = await this.gastosService.pagarCuota(id, userId);
+            const updated = await this.gastosService.pagarCuota(id, userId, { direct });
 
             res.json({
                 message: "Cuota pagada con éxito",

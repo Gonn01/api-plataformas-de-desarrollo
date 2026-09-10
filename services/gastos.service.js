@@ -1,6 +1,7 @@
 import { MovementType, ExpenseStatus, ExpenseType } from "../utils/enums.js";
 import { triggerCompartidos } from "../utils/pusher.js";
 import { customError, ErrorCode } from "../utils/errors.js";
+import { logRed } from "../utils/logs_custom.js";
 
 export class GastosService {
     constructor({ gastosRepository, movementsRepository, entidadesFinancierasRepository, categoriasRepository, reconcileRepository }) {
@@ -9,6 +10,16 @@ export class GastosService {
         this.entidadesFinancierasRepository = entidadesFinancierasRepository;
         this.categoriasRepository = categoriasRepository;
         this.reconcileRepository = reconcileRepository;
+    }
+
+    // Registra un movimiento en el historial de una entidad. Best-effort.
+    async #logEntidad(entidadId, type, detail = null) {
+        if (!entidadId) return;
+        try {
+            await this.movementsRepository.createEntidadLog(entidadId, type, detail);
+        } catch (err) {
+            logRed(`[historial entidad ${entidadId}] no se pudo registrar ${type}: ${err.message}`);
+        }
     }
 
     // "Modo hacer cuentas": el pago en lote (dashboard) exige una sesión abierta.
@@ -67,6 +78,15 @@ export class GastosService {
             await this.categoriasRepository.setCategoriasForGasto(id, category_ids);
         }
 
+        const oldName = current[0].name;
+        if (name !== undefined && name !== oldName) {
+            await this.#logEntidad(
+                current[0].financial_entity_id,
+                MovementType.EDITED,
+                `Gasto renombrado: "${oldName}" → "${name}"`,
+            );
+        }
+
         // Propagar cambios al movimiento espejo (nombre / monto / imagen / gasto fijo
         // y categorías). El tipo del espejo se mantiene opuesto al del original.
         const linkedId = current[0].linked_purchase_id;
@@ -77,6 +97,13 @@ export class GastosService {
             await this.gastosRepository.update(linkedId, name, amount, image_url, fixed_expense, oppositeType);
             if (Array.isArray(category_ids)) {
                 await this.categoriasRepository.setCategoriasForGasto(linkedId, category_ids);
+            }
+            if (name !== undefined && name !== oldName) {
+                await this.#logEntidad(
+                    current[0].linked_financial_entity_id,
+                    MovementType.EDITED,
+                    `Gasto renombrado: "${oldName}" → "${name}"`,
+                );
             }
         }
 
@@ -93,9 +120,20 @@ export class GastosService {
             throw customError(ErrorCode.GASTO_NOT_FOUND);
         }
 
+        await this.#logEntidad(
+            current[0].financial_entity_id,
+            MovementType.DELETE,
+            `Gasto eliminado: "${current[0].name}"`,
+        );
+
         if (linkedId) {
             if (delete_linked) {
                 await this.gastosRepository.delete(linkedId);
+                await this.#logEntidad(
+                    current[0].linked_financial_entity_id,
+                    MovementType.DELETE,
+                    `Gasto eliminado: "${current[0].linked_name ?? current[0].name}"`,
+                );
             } else {
                 // Rompemos el vínculo para no dejar el espejo apuntando a una fila borrada.
                 await this.gastosRepository.unlink(id);
@@ -103,6 +141,31 @@ export class GastosService {
         }
 
         return row[0];
+    }
+
+    // Restaura un gasto soft-deleted. Verifica que su entidad sea del usuario.
+    async restaurar(id, userId) {
+        const [gasto] = await this.gastosRepository.getByIdIncludingDeleted(id);
+        if (!gasto) throw customError(ErrorCode.GASTO_NOT_FOUND);
+
+        if (gasto.financial_entity_id) {
+            const entidad = await this.entidadesFinancierasRepository.getById(
+                gasto.financial_entity_id,
+                userId,
+            );
+            if (!entidad.length) throw customError(ErrorCode.NO_AUTORIZADO);
+        }
+
+        const [restored] = await this.gastosRepository.restore(id);
+        if (!restored) throw customError(ErrorCode.GASTO_NOT_FOUND);
+
+        await this.#logEntidad(
+            gasto.financial_entity_id,
+            MovementType.RESTORE,
+            `Gasto restaurado: "${gasto.name}"`,
+        );
+
+        return await this.getById(id);
     }
 
     // Crea una compra + su log de CREATION + un log de PAYMENT por cada cuota
@@ -199,6 +262,12 @@ export class GastosService {
 
         const gastoId = rows[0].id;
 
+        await this.#logEntidad(
+            financial_entity_id,
+            MovementType.PURCHASE_CREATED,
+            `Gasto creado: "${name}"`,
+        );
+
         // Si la entidad tiene un usuario vinculado, crear la copia pendiente para ese usuario
         if (entidad[0].linked_user_id) {
             await triggerCompartidos(entidad[0].linked_user_id, 'compartido.nuevo', { gastoId });
@@ -243,6 +312,12 @@ export class GastosService {
 
             await this.gastosRepository.linkPurchases(gastoId, mirror[0].id);
             rows[0].linked_purchase_id = mirror[0].id;
+
+            await this.#logEntidad(
+                payment_entity_id,
+                MovementType.PURCHASE_CREATED,
+                `Gasto espejo creado: "${name}"`,
+            );
         }
 
         // Postergar: el gasto no entra en la sesión de cuentas actual/próxima.
@@ -264,7 +339,19 @@ export class GastosService {
         );
         if (!entidad.length) throw customError(ErrorCode.NO_AUTORIZADO);
 
-        const [updated] = await this.gastosRepository.setPostponed(id, Boolean(postponed));
+        const value = Boolean(postponed);
+        const [updated] = await this.gastosRepository.setPostponed(id, value);
+
+        if (value !== current[0].is_postponed) {
+            const type = value ? MovementType.POSTPONED : MovementType.UNPOSTPONED;
+            await this.movementsRepository.createGastoLog(id, type);
+            await this.#logEntidad(
+                current[0].financial_entity_id,
+                type,
+                `${value ? "Postergación agregada" : "Postergación quitada"}: "${current[0].name}"`,
+            );
+        }
+
         return updated;
     }
 
@@ -293,25 +380,40 @@ export class GastosService {
      *  - Con sesión de "hacer cuentas" abierta: DIFERIDO. Solo marca el gasto en
      *    la sesión; el pago real se registra al cerrarla (finishSession ->
      *    efectuarPago) y queda en el historial del gasto y en el de cuentas.
-     *  - Sin sesión abierta: DIRECTO. Registra el movimiento ahora en el
-     *    historial del gasto. NO entra en ningún resumen de "hacer cuentas".
+     *  - Sin sesión abierta (o `direct: true`): DIRECTO. Registra el movimiento
+     *    ahora en el historial del gasto. NO entra en ningún resumen de cuentas.
+     *
+     * `direct` lo usan las pantallas donde "hacer cuentas" no aplica (detalle de
+     * entidad): el pago siempre es directo, aunque haya una sesión abierta.
      */
-    async pagarCuota(purchase_id, userId) {
+    async pagarCuota(purchase_id, userId, { direct = false } = {}) {
         const rows = await this.gastosRepository.getById(purchase_id);
 
         if (rows.length === 0) {
             throw customError(ErrorCode.GASTO_NOT_FOUND);
         }
 
-        if (rows[0].is_postponed) {
-            throw customError(ErrorCode.GASTO_POSTERGADO);
-        }
-
-        const session = await this.getOpenReconcileSession(userId);
+        const session = direct ? null : await this.getOpenReconcileSession(userId);
 
         if (session) {
+            // En "hacer cuentas" un gasto postergado queda deliberadamente afuera.
+            if (rows[0].is_postponed) {
+                throw customError(ErrorCode.GASTO_POSTERGADO);
+            }
             await this.reconcileRepository.upsertItem(session.id, purchase_id, false);
             return rows;
+        }
+
+        // Pago directo: si estaba postergado se levanta la postergación y queda
+        // registrado en el historial del gasto, justo antes del pago.
+        if (rows[0].is_postponed) {
+            await this.gastosRepository.setPostponed(purchase_id, false);
+            await this.movementsRepository.createGastoLog(purchase_id, MovementType.UNPOSTPONED);
+            await this.#logEntidad(
+                rows[0].financial_entity_id,
+                MovementType.UNPOSTPONED,
+                `Postergación quitada al registrar el pago: "${rows[0].name}"`,
+            );
         }
 
         await this.efectuarPago(rows[0], userId);

@@ -199,7 +199,7 @@ describe("GastosController", () => {
 
             await controller.pagarCuota(req, res);
 
-            expect(service.pagarCuota).toHaveBeenCalledWith("10", 1);
+            expect(service.pagarCuota).toHaveBeenCalledWith("10", 1, { direct: false });
             expect(res.json).toHaveBeenCalledWith({ message: "Cuota pagada con éxito", data: mockResult[0] });
         });
 

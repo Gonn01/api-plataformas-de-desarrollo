@@ -3,7 +3,7 @@ import { executeQuery } from "../db.js";
 export class MovementsRepository {
     async getMovementsByEntidad(entidadId) {
         return await executeQuery(
-            `SELECT id, created_at, movement_type
+            `SELECT id, created_at, movement_type, detail
              FROM financial_entities_movements
              WHERE financial_entity_id = $1
              ORDER BY created_at DESC`,
@@ -21,12 +21,12 @@ export class MovementsRepository {
         );
     }
 
-    async createEntidadLog(entidadId, movementType) {
+    async createEntidadLog(entidadId, movementType, detail = null) {
         return await executeQuery(
-            `INSERT INTO financial_entities_movements (created_at, financial_entity_id, movement_type)
-             VALUES (NOW(), $1, $2)
+            `INSERT INTO financial_entities_movements (created_at, financial_entity_id, movement_type, detail)
+             VALUES (NOW(), $1, $2, $3)
              RETURNING *`,
-            [entidadId, movementType], true
+            [entidadId, movementType, detail], true
         );
     }
 

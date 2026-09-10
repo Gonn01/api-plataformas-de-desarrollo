@@ -1,9 +1,17 @@
 export const MovementType = Object.freeze({
-    CREATION:        'CREATION',
-    PAYMENT:         'PAYMENT',
-    PENDING_PAYMENT: 'PENDING_PAYMENT',
-    REFUND:          'REFUND',
-    DELETE:          'DELETE',
+    CREATION:         'CREATION',
+    PAYMENT:          'PAYMENT',
+    PENDING_PAYMENT:  'PENDING_PAYMENT',
+    REFUND:           'REFUND',
+    DELETE:           'DELETE',
+    RESTORE:          'RESTORE',
+    EDITED:           'EDITED',
+    POSTPONED:        'POSTPONED',
+    UNPOSTPONED:      'UNPOSTPONED',
+    // Historial de entidades financieras
+    LINK:             'LINK',
+    UNLINK:           'UNLINK',
+    PURCHASE_CREATED: 'PURCHASE_CREATED',
 });
 
 export const Currency = Object.freeze({

@@ -37,6 +37,11 @@ export async function ensureGastosSchema() {
     ["financial_entities.is_favorite", `
       ALTER TABLE financial_entities ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN NOT NULL DEFAULT false
     `],
+    // Texto libre para el historial de la entidad ("Vinculada a X", nombre de
+    // la compra creada, "nombre viejo -> nuevo", etc.).
+    ["financial_entities_movements.detail", `
+      ALTER TABLE financial_entities_movements ADD COLUMN IF NOT EXISTS detail TEXT
+    `],
     // Índices para el listado de entidades y los CALCULATED_FIELDS (que
     // cuentan movimientos por compra en casi todas las queries de gastos).
     ["idx purchases(financial_entity_id, status)", `
@@ -58,13 +63,16 @@ export async function ensureGastosSchema() {
     }
   }
 
-  // "purchases_movements.movement_type" es un enum de Postgres: hay que registrar
-  // el valor PENDING_PAYMENT antes de poder insertarlo.
-  try {
-    await ensureMovementTypeValue("PENDING_PAYMENT");
-  } catch (err) {
-    logRed(`[gastos schema] falló "movement_type += PENDING_PAYMENT": ${err.message}`);
-    throw err;
+  // "movement_type" es un enum de Postgres (compartido por purchases_movements
+  // y financial_entities_movements): registramos los valores nuevos antes de
+  // poder insertarlos.
+  for (const value of ["PENDING_PAYMENT", "RESTORE", "EDITED", "LINK", "UNLINK", "PURCHASE_CREATED", "POSTPONED", "UNPOSTPONED"]) {
+    try {
+      await ensureMovementTypeValue(value);
+    } catch (err) {
+      logRed(`[gastos schema] falló "movement_type += ${value}": ${err.message}`);
+      throw err;
+    }
   }
 
   logGreen("[gastos schema] OK");
@@ -113,6 +121,16 @@ export class GastosRepository {
     );
   }
 
+  // Igual que getById pero sin filtrar por `deleted` (para restaurar).
+  async getByIdIncludingDeleted(id) {
+    return await executeQuery(
+      `SELECT p.*, ${CALCULATED_FIELDS}
+       FROM purchases p
+       WHERE p.id = $1`,
+      [id], true
+    );
+  }
+
   async getGastosByEntidad(entidadId) {
     return await executeQuery(
       `SELECT p.*, ${CALCULATED_FIELDS},
@@ -144,6 +162,32 @@ export class GastosRepository {
        WHERE p.financial_entity_id = $1 AND p.deleted = false AND p.status = 'PENDING_APPROVAL'
        ORDER BY p.created_at DESC`,
       [entidadId], true
+    );
+  }
+
+  // Gastos eliminados (soft-delete) de una entidad, cualquier estado.
+  async getDeletedByEntidad(entidadId) {
+    return await executeQuery(
+      `SELECT p.*, ${CALCULATED_FIELDS},
+          COALESCE(
+            (SELECT json_agg(json_build_object('id', c.id, 'name', c.name, 'color', c.color))
+             FROM purchases_categories pc
+             JOIN user_categories c ON c.id = pc.category_id
+             WHERE pc.purchase_id = p.id),
+            '[]'::json
+          ) AS categories
+       FROM purchases p
+       WHERE p.financial_entity_id = $1 AND p.deleted = true
+       ORDER BY p.created_at DESC`,
+      [entidadId], true
+    );
+  }
+
+  // Restaura un gasto eliminado. Devuelve la fila o vacío si no estaba eliminado.
+  async restore(id) {
+    return await executeQuery(
+      `UPDATE purchases SET deleted = false WHERE id = $1 AND deleted = true RETURNING id`,
+      [id], true
     );
   }
 

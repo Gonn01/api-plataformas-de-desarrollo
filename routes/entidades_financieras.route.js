@@ -7,6 +7,7 @@ const controller = makeEntidadesFinancierasController();
 
 router.get("/", controller.listar);
 router.get("/:id", controller.obtenerPorId);
+router.get("/:id/gastos-eliminados", controller.gastosEliminados);
 router.post("/", controller.crear);
 router.delete("/:id", controller.eliminar);
 router.put("/:id", controller.actualizar);
